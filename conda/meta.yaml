@@ -1,0 +1,46 @@
+{% set data= load_setup_py_data() %}
+package:
+  name: dm-ocps
+  version: {{ data.get('version') }}
+
+source:
+  path: ../
+
+build:
+  script: python -m pip install --no-deps --ignore-installed .
+  script_env:
+    - PATH
+    - PYTHONPATH
+    - LD_LIBRARY_PATH
+    - OSPL_HOME
+    - PYTHON_BUILD_VERSION
+    - PYTHON_BUILD_LOCATION
+    - DM_CONFIG_OCPS_DIR
+    - LSST_DDS_DOMAIN
+
+test:
+  requires:
+    - ts-conda-build
+    - ts-dds
+    - ts-idl
+    - ts-salobj
+  source_files:
+    - python
+    - bin
+    - tests
+    - setup.cfg
+  commands:
+    - py.test
+
+requirements:
+  host:
+    - python
+    - pip
+    - setuptools_scm
+    - setuptools
+    - pytest-runner
+  run:
+    - python
+    - setuptools
+    - setuptools_scm
+    - ts-salobj
