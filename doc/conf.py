@@ -8,6 +8,9 @@ import lsst.dm.OCPS
 
 
 _g = globals()
-_g.update(build_package_configs(
-    project_name='dm_OCPS',
-    version=lsst.dm.OCPS.version.__version__))
+_g.update(
+    build_package_configs(
+        project_name='dm_OCPS',
+        version=lsst.dm.OCPS.version.__version__
+    )
+)

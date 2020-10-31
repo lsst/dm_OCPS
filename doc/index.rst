@@ -6,46 +6,70 @@
 lsst.dm.OCPS
 ############
 
-.. Paragraph that describes what this Python module does and links to related modules and frameworks.
+.. image:: https://img.shields.io/badge/SAL\ Interface-gray.svg
+    :target: https://ts-xml.lsst.io/sal_interfaces/OCPS.html
+.. image:: https://img.shields.io/badge/GitHub-gray.svg
+    :target: https://github.com/lsst/dm_OCPS
+.. image:: https://img.shields.io/badge/Jira-gray.svg
+    :target: https://jira.lsstcorp.org/issues/?jql=labels+%3D+dm_OCPS
 
-.. .. _lsst.dm.OCPS-using:
+.. _lsst.dm.OCPS.overview:
 
-.. Using lsst.dm.OCPS
-.. ==================
+Overview
+========
 
-.. toctree linking to topics related to using the module's APIs.
+OCPS is the Vera C. Rubin Observatory OCS-Controlled Pipeline System.
 
-.. .. toctree::
-..    :maxdepth: 1
+It allows the Script Queue to explicitly and flexibly command processing of data obtained from the Gen3 Butler repository in the Observatory Operations Data Service.
 
-.. _lsst.dm.OCPS-contributing:
 
-Contributing
-============
+.. _lsst.dm.OCPS.user_guide:
 
-``lsst.dm.OCPS`` is developed at https://github.com/lsst/dm_OCPS.
-You can find Jira issues for this module under the `dm_OCPS <https://jira.lsstcorp.org/issues/?jql=project%20%3D%20DM%20AND%20component%20%3D%20dm_OCPS>`_ component.
+Uwer Guide
+==========
 
-.. If there are topics related to developing this module (rather than using it), link to this from a toctree placed here.
+Start the OCPS CSC as follows:
 
-.. .. toctree::
-..    :maxdepth: 1
+.. prompt:: bash
 
-.. .. _lsst.dm.OCPS-scripts:
+    run_OCPS.py
 
-.. Script reference
-.. ================
+Stop the CSC by sending it to the OFFLINE state.
 
-.. .. TODO: Add an item to this toctree for each script reference topic in the scripts subdirectory.
+See OCPS `SAL communication interface <https://ts-xml.lsst.io/sal_interfaces/OCPS.html>`_ for commands, events, and telemetry.
 
-.. .. toctree::
-..    :maxdepth: 1
+.. _lsst.dm.OCPS.configuration:
 
-.. .. _lsst.dm.OCPS-pyapi:
+Configuration
+-------------
 
-Python API reference
-====================
+Configuration is defined by `this schema <https://github.com/lsst/dm_OCPS/blob/develop/schema/OCPS.yaml>`_.
 
-.. automodapi:: lsst.dm.OCPS
-   :no-main-docstr:
-   :no-inheritance-diagram:
+Configuration files live in `dm_config_ocps/OCPS <https://github.com/lsst/dm_config_ocps/tree/develop/OCPS>`_.
+
+.. _lsst.dm.OCPS.simulation:
+
+Simulator
+---------
+
+The CSC includes a simulation mode.  To run using simulation:
+
+.. prompt:: bash
+
+  run_OCPS.py --simulate
+
+The simulated service always succeeds at running ``true.yaml`` and fails at running ``false.yaml``.
+
+Developer Guide
+===============
+
+.. toctree::
+    developer-guide
+    :maxdepth: 1
+
+Version History
+===============
+
+.. toctree::
+    version_history
+    :maxdepth: 1
