@@ -6,7 +6,7 @@
 Developer Guide
 ###############
 
-The ATDome CSC is implemented using `ts_salobj <https://github.com/lsst-ts/ts_salobj>`_.
+The OCPS CSC is implemented using `ts_salobj <https://github.com/lsst-ts/ts_salobj>`_.
 
 .. _lsst.dm.OCPS.api:
 
