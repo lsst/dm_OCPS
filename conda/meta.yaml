@@ -41,6 +41,7 @@ requirements:
     - pytest-runner
   run:
     - python
+    - requests
     - setuptools
     - setuptools_scm
     - ts-salobj
