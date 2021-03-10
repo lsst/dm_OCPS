@@ -18,12 +18,12 @@
 #
 # You should have received a copy of the GNU General Public License
 
+import asynctest
 import glob
+import json
 import os
 import pathlib
 import unittest
-
-import asynctest
 import yaml
 
 from lsst.ts import salobj
@@ -35,16 +35,19 @@ TEST_CONFIG_DIR = pathlib.Path(__file__).parents[1].joinpath("tests", "data", "c
 
 class CscTestCase(salobj.BaseCscTestCase, asynctest.TestCase):
     def basic_make_csc(self, initial_state, config_dir, simulation_mode,
-                       **kwargs):
+                       settings_to_apply='', **kwargs):
         return OCPS.OcpsCsc(
             initial_state=initial_state,
             config_dir=config_dir,
+            settings_to_apply=settings_to_apply,
             simulation_mode=simulation_mode,
         )
 
     async def test_default_config_dir(self):
         async with self.make_csc(
-            initial_state=salobj.State.STANDBY, config_dir=None, simulation_mode=1
+            initial_state=salobj.State.STANDBY,
+            config_dir=None,
+            simulation_mode=1,
         ):
             self.assertEqual(self.csc.summary_state, salobj.State.STANDBY)
             await self.assert_next_summary_state(salobj.State.STANDBY)
@@ -101,6 +104,50 @@ class CscTestCase(salobj.BaseCscTestCase, asynctest.TestCase):
                     "abort_job",
                 )
             )
+
+    async def test_simulation(self):
+        async with self.make_csc(
+            initial_state=salobj.State.ENABLED,
+            config_dir=None,
+            settings_to_apply="default",
+            simulation_mode=1,
+        ):
+            for pipeline, result in (("true.yaml", True), ("false.yaml", False)):
+                ack = await self.remote.cmd_execute.set_start(
+                    pipeline=pipeline,
+                    version="ignored",
+                    config="ignored",
+                    wait_done=False,
+                )
+                self.assertEqual(ack.ack, salobj.SalRetCode.CMD_ACK)
+                ack = await self.remote.cmd_execute.next_ackcmd(
+                    ack, wait_done=False)
+                self.assertEqual(ack.ack, salobj.SalRetCode.CMD_INPROGRESS)
+                job_id = json.loads(ack.result)["job_id"]
+                self.assertTrue(job_id.startswith(pipeline),
+                                f"incorrect job_id {job_id}")
+                ack = await self.remote.cmd_execute.next_ackcmd(ack)
+                self.assertEqual(ack.ack, salobj.SalRetCode.CMD_COMPLETE)
+                data = await self.remote.evt_job_result.next(flush=False)
+                self.assertEqual(data.job_id, job_id)
+                self.assertEqual(data.exit_code, 0)
+                self.assertEqual(json.loads(data.result)["result"], result)
+
+            with self.assertRaises(salobj.AckError):
+                ack = await self.remote.cmd_execute.set_start(
+                    pipeline="unknown$pipeline.yaml",
+                    version="ignored",
+                    config="ignored",
+                    wait_done=True,
+                )
+
+            with self.assertRaises(salobj.AckError):
+                ack = await self.remote.cmd_execute.set_start(
+                    pipeline="fault.yaml",
+                    version="ignored",
+                    config="ignored",
+                    wait_done=True,
+                )
 
 
 if __name__ == "__main__":
