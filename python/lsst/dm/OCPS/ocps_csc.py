@@ -31,7 +31,8 @@ import yaml
 from lsst.ts import salobj
 from . import __version__
 
-CONFIG_SCHEMA = """
+CONFIG_SCHEMA = yaml.safe_load(
+    """
 $schema: http://json-schema.org/draft-07/schema#
 $id: https://github.com/lsst/dm_OCPS/blob/master/schema/OCPS.yaml
 # title must end with one or more spaces followed by the schema version, which must begin with "v"
@@ -52,6 +53,7 @@ required:
   - poll_interval
 additionalProperties: false
 """
+)
 
 
 class OcpsCsc(salobj.ConfigurableCsc):
@@ -102,7 +104,7 @@ class OcpsCsc(salobj.ConfigurableCsc):
         super().__init__(
             "OCPS",
             index=0,
-            config_schema=yaml.safe_load(CONFIG_SCHEMA),
+            config_schema=CONFIG_SCHEMA,
             config_dir=config_dir,
             initial_state=initial_state,
             settings_to_apply=settings_to_apply,
