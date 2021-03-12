@@ -18,7 +18,7 @@
 #
 # You should have received a copy of the GNU General Public License
 
-__all__ = ["OcpsCsc"]
+__all__ = ["OcpsCsc", "CONFIG_SCHEMA"]
 
 import asyncio
 import json
