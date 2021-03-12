@@ -18,7 +18,6 @@
 #
 # You should have received a copy of the GNU General Public License
 
-import asynctest
 import glob
 import json
 import os
@@ -33,7 +32,7 @@ STD_TIMEOUT = 2  # standard command timeout (sec)
 TEST_CONFIG_DIR = pathlib.Path(__file__).parents[1].joinpath("tests", "data", "config")
 
 
-class CscTestCase(salobj.BaseCscTestCase, asynctest.TestCase):
+class CscTestCase(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase):
     def basic_make_csc(
         self, initial_state, config_dir, simulation_mode, settings_to_apply="", **kwargs
     ):
