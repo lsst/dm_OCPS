@@ -77,10 +77,10 @@ class OcpsCsc(salobj.ConfigurableCsc):
     Supported simulation modes:
 
     * 0: regular operation
-    * 1: simulation mode:
+    * 1: simulation mode accepts execute commands with these pipeline names:
       * true.yaml always succeeds
       * false.yaml always fails
-      * error.yaml always gives a connection error
+      * fault.yaml causes a fault
 
     ** Error Codes**
 
@@ -134,7 +134,7 @@ class OcpsCsc(salobj.ConfigurableCsc):
                     version=data.version,
                     config_overrides=[dict(key=k, val=v) for k, v in data.config],
                     data_query=data.data_query,
-                )
+                ),
             )
             self.log.info(f"PUT: {payload}")
             result = self.connection.put(self.config.url, json=payload)
@@ -161,10 +161,12 @@ class OcpsCsc(salobj.ConfigurableCsc):
         self.log.info(f"Starting async wait: {status_url}")
 
         while True:
-            if status_url.startswith("ocps://"):
-                # Simulation mode (as indicated by special URL scheme).
+            if self.simulation_mode != 0:
+                # Simulation mode.
                 # Rather than poll for pipeline status, simulate an appropriate
                 # response.
+                if not status_url.startswith("ocps://"):
+                    raise salobj.ExpectedError(f"Invalid simulation URL: {status_url}")
                 await asyncio.sleep(abs(random.normalvariate(10, 4)))
                 self.log.info(f"Simulating result for {job_id}")
                 if job_id not in self.simulated_jobs:
