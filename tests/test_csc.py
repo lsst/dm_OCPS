@@ -29,13 +29,14 @@ import yaml
 from lsst.ts import salobj
 from lsst.dm import OCPS
 
-STD_TIMEOUT = 2    # standard command timeout (sec)
+STD_TIMEOUT = 2  # standard command timeout (sec)
 TEST_CONFIG_DIR = pathlib.Path(__file__).parents[1].joinpath("tests", "data", "config")
 
 
 class CscTestCase(salobj.BaseCscTestCase, asynctest.TestCase):
-    def basic_make_csc(self, initial_state, config_dir, simulation_mode,
-                       settings_to_apply='', **kwargs):
+    def basic_make_csc(
+        self, initial_state, config_dir, simulation_mode, settings_to_apply="", **kwargs
+    ):
         return OCPS.OcpsCsc(
             initial_state=initial_state,
             config_dir=config_dir,
@@ -102,7 +103,7 @@ class CscTestCase(salobj.BaseCscTestCase, asynctest.TestCase):
                 enabled_commands=(
                     "execute",
                     "abort_job",
-                )
+                ),
             )
 
     async def test_simulation(self):
@@ -120,12 +121,12 @@ class CscTestCase(salobj.BaseCscTestCase, asynctest.TestCase):
                     wait_done=False,
                 )
                 self.assertEqual(ack.ack, salobj.SalRetCode.CMD_ACK)
-                ack = await self.remote.cmd_execute.next_ackcmd(
-                    ack, wait_done=False)
+                ack = await self.remote.cmd_execute.next_ackcmd(ack, wait_done=False)
                 self.assertEqual(ack.ack, salobj.SalRetCode.CMD_INPROGRESS)
                 job_id = json.loads(ack.result)["job_id"]
-                self.assertTrue(job_id.startswith(pipeline),
-                                f"incorrect job_id {job_id}")
+                self.assertTrue(
+                    job_id.startswith(pipeline), f"incorrect job_id {job_id}"
+                )
                 ack = await self.remote.cmd_execute.next_ackcmd(ack)
                 self.assertEqual(ack.ack, salobj.SalRetCode.CMD_COMPLETE)
                 data = await self.remote.evt_job_result.next(flush=False)

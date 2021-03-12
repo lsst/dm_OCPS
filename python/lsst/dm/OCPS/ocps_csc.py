@@ -91,8 +91,11 @@ class OcpsCsc(salobj.ConfigurableCsc):
     version = __version__
 
     def __init__(
-        self, config_dir=None, initial_state=salobj.State.STANDBY,
-        settings_to_apply='', simulation_mode=0,
+        self,
+        config_dir=None,
+        initial_state=salobj.State.STANDBY,
+        settings_to_apply="",
+        simulation_mode=0,
     ):
         self.config = None
         self.simulated_jobs = set()
