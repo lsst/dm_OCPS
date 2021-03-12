@@ -23,9 +23,9 @@ from lsst.ts.salobj import CscCommander
 
 class OcpsCscCommander(CscCommander):
     def __init__(self, *args, **kwargs):
-        super().__init__(name="OCPS", index=False)
+        super().__init__(name="OCPS", *args, **kwargs)
         for command in ("abort", "enterControl", "setValue"):
             del self.command_dict[command]
 
 
-asyncio.run(OcpsCscCommander.amain(index=False))
+asyncio.run(OcpsCscCommander.amain(index=None))
