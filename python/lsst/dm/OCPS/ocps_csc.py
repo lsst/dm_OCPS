@@ -141,7 +141,7 @@ class OcpsCsc(salobj.ConfigurableCsc):
         else:
             if data.pipeline not in ("true.yaml", "false.yaml", "fault.yaml"):
                 raise salobj.ExpectedError(f"Unknown pipeline: {data.pipeline}")
-            job_id = f"{data.pipeline}-{time.time()}"
+            job_id = f"{data.pipeline}-{salobj.current_tai()}"
             status_url = f"ocps://{job_id}"
             self.log.info(f"Simulated POST result: {status_url}")
             self.simulated_jobs.add(job_id)
