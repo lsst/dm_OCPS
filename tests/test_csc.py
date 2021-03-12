@@ -81,8 +81,11 @@ class CscTestCase(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase):
             await self.remote.cmd_start.set_start(
                 settingsToApply="all_fields", timeout=STD_TIMEOUT
             )
-            version_msg = await self.remote.evt_softwareVersions.aget()
-            self.assertEqual(version_msg.cscVersion, OCPS.__version__)
+            await self.assert_next_sample(
+                self.remote.evt_softwareVersions,
+                cscVersion=OCPS.__version__,
+                subsystemVersions="",
+            )
             self.assertEqual(self.csc.summary_state, salobj.State.DISABLED)
             await self.assert_next_summary_state(salobj.State.DISABLED)
             all_fields_path = os.path.join(TEST_CONFIG_DIR, "all_fields.yaml")
