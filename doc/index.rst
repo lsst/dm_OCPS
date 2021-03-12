@@ -25,7 +25,7 @@ It allows the Script Queue to explicitly and flexibly command processing of data
 
 .. _lsst.dm.OCPS.user_guide:
 
-Uwer Guide
+User Guide
 ==========
 
 Start the OCPS CSC as follows:
@@ -43,7 +43,11 @@ See OCPS `SAL communication interface <https://ts-xml.lsst.io/sal_interfaces/OCP
 Configuration
 -------------
 
-Configuration is defined by `this schema <https://github.com/lsst/dm_OCPS/blob/develop/schema/OCPS.yaml>`_.
+Configuration is defined by a schema in the code.
+It consists of two required values:
+
+* ``url``: a URL pointing to the REST API endpoint for the back-end execution service
+* ``poll_interval``: the interval in seconds between polls for status of executing pipelines
 
 Configuration files live in `dm_config_ocps/OCPS <https://github.com/lsst/dm_config_ocps/tree/develop/OCPS>`_.
 
@@ -58,7 +62,9 @@ The CSC includes a simulation mode.  To run using simulation:
 
   run_OCPS.py --simulate
 
-The simulated service always succeeds at running ``true.yaml`` and fails at running ``false.yaml``.
+The simulation bypasses the need for a back-end execution service, so it ignores any configuration.
+It instead accepts ``execute`` commands with a ``pipeline`` parameter of ``true.yaml`` (always succeeding), ``false.yaml`` (always failing), or ``fault.yaml`` (always causing a transition to FAULT state).
+All other ``execute`` parameters are ignored.
 
 Developer Guide
 ===============

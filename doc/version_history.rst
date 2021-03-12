@@ -5,3 +5,14 @@
 ###############
 Version History
 ###############
+
+v1.0.0
+======
+
+* Initial release.
+
+Requires:
+
+* ts_salobj 6.3
+* ts_idl
+* IDL file for OCPS from ts_xml 8
