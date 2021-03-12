@@ -126,11 +126,15 @@ class OcpsCsc(salobj.ConfigurableCsc):
         self.log.info(f"execute command with {data}")
 
         if self.simulation_mode == 0:
+            # Real command.
             payload = dict(
                 type="pipeline",
                 version=data.version,
                 config=data.config,
-                env=[dict(name="PIPELINE", value=data.pipeline)],
+                env=[
+                    dict(name="PIPELINE", value=data.pipeline),
+                    dict(name="DATA_QUERY", value=data.data_query)
+                ],
             )
             self.log.info(f"PUT: {payload}")
             result = self.connection.put(self.config.url, json=payload)
