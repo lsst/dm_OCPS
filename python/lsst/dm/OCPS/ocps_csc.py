@@ -139,11 +139,16 @@ class OcpsCsc(salobj.ConfigurableCsc):
             job_id = result.json().job_id
             status_url = f"{self.config.url}/{job_id}"
         else:
+            # Simulation mode.
+            # Rather than prepare a PUT request, simulate one with a special
+            # URL scheme.
             if data.pipeline not in ("true.yaml", "false.yaml", "fault.yaml"):
-                raise salobj.ExpectedError(f"Unknown pipeline: {data.pipeline}")
+                raise salobj.ExpectedError(
+                    f"Unknown (simulated) pipeline: {data.pipeline}"
+                )
             job_id = f"{data.pipeline}-{salobj.current_tai()}"
             status_url = f"ocps://{job_id}"
-            self.log.info(f"Simulated POST result: {status_url}")
+            self.log.info(f"Simulated PUT result: {status_url}")
             self.simulated_jobs.add(job_id)
 
         payload = json.dumps(dict(job_id=job_id))
@@ -153,8 +158,10 @@ class OcpsCsc(salobj.ConfigurableCsc):
 
         while True:
             if status_url.startswith("ocps://"):
+                # Simulation mode (as indicated by special URL scheme).
+                # Rather than poll for pipeline status, simulate an appropriate
+                # response.
                 await asyncio.sleep(abs(random.normalvariate(10, 4)))
-                # simulation mode
                 self.log.info(f"Simulating result for {job_id}")
                 if job_id not in self.simulated_jobs:
                     raise salobj.ExpectedError(f"No such job id: {job_id}")
@@ -175,7 +182,9 @@ class OcpsCsc(salobj.ConfigurableCsc):
                     )
                     raise salobj.ExpectedError("Failed to connect (simulated)")
                 else:
-                    raise salobj.ExpectedError(f"Unknown pipeline: {job_id}")
+                    raise salobj.ExpectedError(
+                        f"Unknown (simulated) pipeline: {job_id}"
+                    )
                 return
 
             self.log.info(f"GET: {status_url}")
