@@ -23,9 +23,8 @@ __all__ = ["OcpsCsc", "CONFIG_SCHEMA"]
 import asyncio
 import json
 import random
-import time
-import types
 import requests
+import types
 import yaml
 
 from lsst.ts import salobj
@@ -230,7 +229,7 @@ class OcpsCsc(salobj.ConfigurableCsc):
         else:
             if data.job_id in self.simulated_jobs:
                 self.simulated_jobs.remove(data.job_id)
-                payload = json.dumps(dict(abort_time=time.time()))
+                payload = json.dumps(dict(abort_time=salobj.current_tai()))
                 self.evt_job_result.set_put(
                     job_id=data.job_id, exit_code=255, result=payload
                 )
