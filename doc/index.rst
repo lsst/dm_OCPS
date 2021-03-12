@@ -63,7 +63,8 @@ The CSC includes a simulation mode.  To run using simulation:
   run_OCPS.py --simulate
 
 The simulation bypasses the need for a back-end execution service, so it ignores any configuration.
-It instead accepts ``execute`` commands with a ``pipeline`` parameter of ``true.yaml`` (always succeeding), ``false.yaml`` (always failing), or ``fault.yaml`` (always causing a transition to FAULT state).
+A special internal-only ``ocps://`` URL is used instead; this URL scheme should never appear in a configuration.
+The simulation accepts ``execute`` commands with a ``pipeline`` parameter of ``true.yaml`` (always succeeding), ``false.yaml`` (always failing), or ``fault.yaml`` (always causing a transition to FAULT state).
 All other ``execute`` parameters are ignored.
 
 Developer Guide
