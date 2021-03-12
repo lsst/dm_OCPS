@@ -129,12 +129,13 @@ class OcpsCsc(salobj.ConfigurableCsc):
             # Real command.
             payload = dict(
                 type="pipeline",
-                version=data.version,
-                config=data.config,
-                env=[
-                    dict(name="PIPELINE", value=data.pipeline),
-                    dict(name="DATA_QUERY", value=data.data_query)
-                ],
+                version="v1.0.0",
+                config=dict(
+                    name=data.pipeline,
+                    version=data.version,
+                    config_overrides=[dict(key=k, val=v) for k, v in data.config],
+                    data_query=data.data_query,
+                )
             )
             self.log.info(f"PUT: {payload}")
             result = self.connection.put(self.config.url, json=payload)
