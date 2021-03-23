@@ -137,11 +137,11 @@ class OcpsCsc(salobj.ConfigurableCsc):
                 ),
             )
             self.log.info(f"PUT: {payload}")
-            result = self.connection.put(self.config.url, json=payload)
+            result = self.connection.put(f"{self.config.url}/job", json=payload)
             result.raise_for_status()
             self.log.info(f"PUT result: {result.data}")
             job_id = result.json().job_id
-            status_url = f"{self.config.url}/{job_id}"
+            status_url = f"{self.config.url}/job/{job_id}"
         else:
             # Simulation mode.
             # Rather than prepare a PUT request, simulate one with a special
@@ -222,7 +222,7 @@ class OcpsCsc(salobj.ConfigurableCsc):
         self.log.info(f"abort_job command with {data}")
         if self.simulation_mode == 0:
             self.log.info(f"DELETE: {data.job_id}")
-            result = self.connection.delete(f"{self.config.url}/{data.job_id}")
+            result = self.connection.delete(f"{self.config.url}/job/{data.job_id}")
             result.raise_for_status()
             self.evt_job_result.set_put(
                 job_id=data.job_id, exit_code=255, result=result.data
