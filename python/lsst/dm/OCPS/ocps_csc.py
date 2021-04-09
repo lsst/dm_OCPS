@@ -47,9 +47,36 @@ properties:
     description: Time between polls for status of executing pipelines (sec)
     type: number
     exclusiveMinimum: 0
+  butler:
+    description: Path/URI of Butler repo
+    type: string
+  triggers:
+    description: Events and the pipelines they should trigger
+    type: array
+    items:
+      type: object
+      properties:
+        csc:
+          description: CSC from which the event will arrive
+          type: string
+        event:
+          description: Name of the event that should be waited for
+          type: string
+        version:
+          description: EUPS tag to setup
+          type: string
+        pipeline:
+          description: Pipeline to execute upon receipt
+          type: string
+        data_query_expr:
+          description: Expression to determine data query
+          type: string
+      required: ["csc", "event", "pipeline", "data_query_expr"]
+      additionalProperties: false
 required:
   - url
   - poll_interval
+  - butler
 additionalProperties: false
 """
 )
@@ -110,31 +137,99 @@ class OcpsCsc(salobj.ConfigurableCsc):
             simulation_mode=simulation_mode,
         )
         self.cmd_execute.allow_multiple_callbacks = True
+        if hasattr(self.config, "triggers"):
+            self.trigger_remotes = []
+            for trigger in self.config.triggers:
+                remote = salobj.Remote(
+                    domain=self.domain,
+                    name=trigger.csc,
+                    include=[trigger.event],
+                )
+                event = remote.getattr(trigger.event)
+                event.callback = self.gen_event_callback(trigger)
+                self.trigger_remotes.append(remote)
+
+    def gen_event_callback(self, trigger):
+        """Return a callback that triggers a pipeline on an event.
+
+        Parameters
+        ----------
+        trigger: types.SimpleNamespace
+            Must contain version, pipeline, data_query_expr attributes
+
+        Notes
+        -----
+        version: str
+            Science Pipelines version as an EUPS tag
+        pipeline: str
+            URL of pipeline YAML
+        data_query_expr: str
+            String to generate a data query expression for "pipetask run",
+            formatted with ``.format(data=data)`` so ``{data.attr}``
+            substitutions can be used
+        """
+        async def event_callback(self, data):
+            self.log.info(f"Event {trigger.event} occurred: {data}")
+            data.version = trigger.version
+            data.pipeline = trigger.pipeline
+            data.config = ""
+            data.data_query = trigger.data_query_expr.format(data=data)
+            self.log.info(f"Calling _execute with {data}")
+            # self._execute(data)
+
+        return event_callback
 
     async def do_execute(self, data):
         """Implement the ``execute`` command.
 
-        Submit a request for execution to the back-end REST API.
+        Parameters
+        ----------
+        data: types.SimpleNamespace
+            Must contain version, pipeline, config, and data_query attributes
+        """
+        self.assert_enabled("execute")
+        self.log.info(f"execute command with {data}")
+        await self._execute(data)
+
+    async def _execute(self, data):
+        """Submit a request for execution to the back-end REST API.
 
         Parameters
         ----------
         data: types.SimpleNamespace
-            Must contain pipeline, version, and config attributes
-        """
-        self.assert_enabled("execute")
-        self.log.info(f"execute command with {data}")
+            Must contain version, pipeline, config, data_query attributes
 
+        Notes
+        -----
+        version: str
+            Science Pipelines version as an EUPS tag
+        pipeline: str
+            URL of pipeline YAML
+        config: str
+            Command line options for "pipetask run"
+        data_query: str
+            Data query expression for "pipetask run"
+
+        The ``data.config`` attribute is expected to contain ``-i`` options
+        beyond the default OODS input collection and ``-c`` options to
+        override configuration values.
+        """
         if self.simulation_mode == 0:
             # Real command.
+            payload_env = dict(
+                EUPS_TAG=data.version,
+                PIPELINE_URL=data.pipeline,
+                BUTLER_REPO=self.config.butler,
+                RUN_OPTIONS=data.config,
+                DATA_QUERY=data.data_query,
+            )
             payload = dict(
-                type="pipeline",
-                version="v1.0.0",
-                config=dict(
-                    name=data.pipeline,
-                    version=data.version,
-                    config_overrides=[dict(key=k, val=v) for k, v in data.config],
-                    data_query=data.data_query,
-                ),
+                command="pipetask.sh",
+                url="https://github.com/uws_scripts",
+                commit_ref="master",
+                run_id=data.private_seqNum,
+                replicas=1,
+                environment=[dict(key=k, val=v) for k, v in payload_env]
             )
             self.log.info(f"PUT: {payload}")
             result = self.connection.put(f"{self.config.url}/job", json=payload)
