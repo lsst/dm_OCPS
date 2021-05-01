@@ -50,6 +50,9 @@ properties:
   butler:
     description: Path/URI of Butler repo
     type: string
+  output_glob:
+    description: Glob pattern for output dataset types
+    type: string
   triggers:
     description: Events and the pipelines they should trigger
     type: array
@@ -77,6 +80,7 @@ required:
   - url
   - poll_interval
   - butler
+  - output_glob
 additionalProperties: false
 """
 )
@@ -221,6 +225,7 @@ class OcpsCsc(salobj.ConfigurableCsc):
                 PIPELINE_URL=data.pipeline,
                 BUTLER_REPO=self.config.butler,
                 RUN_OPTIONS=data.config,
+                OUTPUT_GLOB=self.config.output_glob,
                 DATA_QUERY=data.data_query,
             )
             payload = dict(
