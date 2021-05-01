@@ -35,7 +35,7 @@ CONFIG_SCHEMA = yaml.safe_load(
 $schema: http://json-schema.org/draft-07/schema#
 $id: https://github.com/lsst/dm_OCPS/blob/master/schema/OCPS.yaml
 # title must end with one or more spaces followed by the schema version, which must begin with "v"
-title: OCPS v1
+title: OCPS v2
 description: Schema for OCPS configuration files
 type: object
 properties:
@@ -49,6 +49,9 @@ properties:
     exclusiveMinimum: 0
   butler:
     description: Path/URI of Butler repo
+    type: string
+  input_collection:
+    description: Name of default input collection (optional)
     type: string
   output_glob:
     description: Glob pattern for output dataset types
@@ -220,11 +223,14 @@ class OcpsCsc(salobj.ConfigurableCsc):
         """
         if self.simulation_mode == 0:
             # Real command.
+            run_options = ""
+            if hasattr(self.config, "input_collection"):
+                run_options = f"-i {self.config.input_collection}"
             payload_env = dict(
                 EUPS_TAG=data.version,
                 PIPELINE_URL=data.pipeline,
                 BUTLER_REPO=self.config.butler,
-                RUN_OPTIONS=data.config,
+                RUN_OPTIONS=" ".join(run_options, data.config),
                 OUTPUT_GLOB=self.config.output_glob,
                 DATA_QUERY=data.data_query,
             )
