@@ -1,4 +1,4 @@
+url: http://uws-api-server.nts.svc.cluster.local/job
 poll_interval: 0.8
-butler: /repo/LATISS
 input_collection: LATISS/defaults,LATISS/raw/all
 output_glob: "*_metricvalue"
