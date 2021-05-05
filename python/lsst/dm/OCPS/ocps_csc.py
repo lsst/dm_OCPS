@@ -182,6 +182,7 @@ class OcpsCsc(salobj.ConfigurableCsc):
             data.config = ""
             data.data_query = trigger.data_query_expr.format(event=data)
             self.log.info(f"Calling _execute with {data}")
+            # TODO DM-30032: complete event-triggered execution
             # self._execute(data)
 
         return event_callback
@@ -262,6 +263,7 @@ class OcpsCsc(salobj.ConfigurableCsc):
             self.simulated_jobs.add(job_id)
 
         payload = json.dumps(dict(job_id=job_id))
+        # TODO DM-30032: change to a custom event
         self.cmd_execute.ack_in_progress(data, timeout=600.0, result=payload)
         self.log.info(f"Ack in progress: {payload}")
         self.log.info(f"Starting async wait: {status_url}")
