@@ -180,7 +180,7 @@ class OcpsCsc(salobj.ConfigurableCsc):
             data.version = trigger.version
             data.pipeline = trigger.pipeline
             data.config = ""
-            data.data_query = trigger.data_query_expr.format(data=data)
+            data.data_query = trigger.data_query_expr.format(event=data)
             self.log.info(f"Calling _execute with {data}")
             # self._execute(data)
 
