@@ -1,2 +1,15 @@
 url: http://uws-api-server.nts.svc.cluster.local/job
 poll_interval: 0.8
+butler: /repo/LATISS
+input_collection: LATISS/defaults,LATISS/raw/all
+output_glob: "*_metricvalue"
+triggers:
+  - csc: ATArchiver
+    event: imageInOODS
+    version: d_latest
+    pipeline: $OBS_LSST/pipelines/DRP.yaml#isr
+    data_query_expr: >
+      instrument = 'LATISS' AND
+      exposure = '{event.obsid}' AND
+      raft = '{event.raft}' AND
+      detector = '{event.sensor}'

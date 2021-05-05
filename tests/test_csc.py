@@ -55,7 +55,7 @@ class CscTestCase(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase):
             desired_config_pkg_name = "dm_config_ocps"
             desired_config_env_name = desired_config_pkg_name.upper() + "_DIR"
             desired_config_pkg_dir = os.environ[desired_config_env_name]
-            desired_config_dir = pathlib.Path(desired_config_pkg_dir) / "OCPS/v1"
+            desired_config_dir = pathlib.Path(desired_config_pkg_dir) / "OCPS/v2"
             self.assertEqual(self.csc.get_config_pkg(), desired_config_pkg_name)
             self.assertEqual(self.csc.config_dir, desired_config_dir)
 

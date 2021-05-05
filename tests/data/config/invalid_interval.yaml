@@ -1,2 +1,5 @@
 url: "this is not a real url but still parses"
 poll_interval: "none"
+butler: /repo/LATISS
+input_collection: LATISS/defaults,LATISS/raw/all
+output_glob: "*_metricvalue"
