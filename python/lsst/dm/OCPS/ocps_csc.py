@@ -355,4 +355,4 @@ class OcpsCsc(salobj.ConfigurableCsc):
         self.log.info(f"Configuring with {config}")
         self.config = config
         if self.simulation_mode == 0:
-            self.connection = requests.Pool()
+            self.connection = requests.Session()
