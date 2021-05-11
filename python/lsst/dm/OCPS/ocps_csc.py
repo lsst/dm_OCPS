@@ -314,16 +314,16 @@ class OcpsCsc(salobj.ConfigurableCsc):
                 raise salobj.ExpectedError(
                     f"Job ID mismatch: got {response.jobId} instead of {job_id}"
                 )
-            if response.phase not in DONE_PHASES:
-                self.log.debug(f"{status_url} sleeping for {self.config.poll_interval}")
-                await asyncio.sleep(self.config.poll_interval)
-            else:
+            if response.phase in DONE_PHASES:
                 self.log.info(f"{status_url} result: {response.text}")
                 exit_code = 1 if response.phase != "completed" else 0
                 self.evt_job_result.set_put(
                     job_id=job_id, exit_code=exit_code, result=response.text
                 )
                 return
+            else:
+                self.log.debug(f"{status_url} sleeping for {self.config.poll_interval}")
+                await asyncio.sleep(self.config.poll_interval)
 
     async def do_abort_job(self, data):
         """Implement the ``abort_job`` command.
