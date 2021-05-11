@@ -241,7 +241,7 @@ class OcpsCsc(salobj.ConfigurableCsc):
                 commit_ref="master",
                 run_id=data.private_seqNum,
                 replicas=1,
-                environment=[dict(key=k, val=v) for k, v in payload_env]
+                environment=[dict(key=k, val=v) for k, v in payload_env.items()]
             )
             self.log.info(f"PUT: {payload}")
             result = self.connection.put(f"{self.config.url}/job", json=payload)
