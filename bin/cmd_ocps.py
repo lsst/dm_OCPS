@@ -18,6 +18,7 @@
 # GNU General Public License for more details.
 #
 import asyncio
+import shlex
 from lsst.ts.salobj import CscCommander
 
 
@@ -26,6 +27,10 @@ class OcpsCscCommander(CscCommander):
         super().__init__(name="OCPS", *args, **kwargs)
         for command in ("abort", "enterControl", "setValue"):
             del self.command_dict[command]
+
+    async def do_execute(self, args):
+        # Re-parse to handle quotes
+        await self.run_command_topic("execute", shlex.split(" ".join(args)))
 
 
 asyncio.run(OcpsCscCommander.amain(index=None))
