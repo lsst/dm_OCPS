@@ -319,8 +319,9 @@ class OcpsCsc(salobj.ConfigurableCsc):
                 await asyncio.sleep(self.config.poll_interval)
             else:
                 self.log.info(f"{status_url} result: {response.text}")
+                exit_code = 1 if response.phase != "completed" else 0
                 self.evt_job_result.set_put(
-                    job_id=job_id, exit_code=0, result=response.text
+                    job_id=job_id, exit_code=exit_code, result=response.text
                 )
                 return
 
