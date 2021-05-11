@@ -231,7 +231,7 @@ class OcpsCsc(salobj.ConfigurableCsc):
                 EUPS_TAG=data.version,
                 PIPELINE_URL=data.pipeline,
                 BUTLER_REPO=self.config.butler,
-                RUN_OPTIONS=" ".join(run_options, data.config),
+                RUN_OPTIONS=" ".join((run_options, data.config)),
                 OUTPUT_GLOB=self.config.output_glob,
                 DATA_QUERY=data.data_query,
             )
