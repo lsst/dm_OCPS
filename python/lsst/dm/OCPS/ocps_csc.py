@@ -88,6 +88,8 @@ additionalProperties: false
 """
 )
 
+DONE_PHASES = ["completed", "error", "aborted", "unknown"]
+
 
 class OcpsCsc(salobj.ConfigurableCsc):
     """CSC for the OCS-Controlled Pipeline Service.
@@ -175,6 +177,7 @@ class OcpsCsc(salobj.ConfigurableCsc):
             formatted with ``.format(data=data)`` so ``{data.attr}``
             substitutions can be used
         """
+
         async def event_callback(self, data):
             self.log.info(f"Event {trigger.event} occurred: {data}")
             data.version = trigger.version
@@ -236,18 +239,20 @@ class OcpsCsc(salobj.ConfigurableCsc):
                 DATA_QUERY=data.data_query,
             )
             payload = dict(
+                run_id=data.private_seqNum,
                 command="pipetask.sh",
                 url="https://github.com/uws_scripts",
                 commit_ref="master",
-                run_id=data.private_seqNum,
-                replicas=1,
-                environment=[dict(key=k, val=v) for k, v in payload_env.items()]
+                environment=[dict(key=k, val=v) for k, v in payload_env.items()],
             )
             self.log.info(f"PUT: {payload}")
             result = self.connection.put(f"{self.config.url}/job", json=payload)
             result.raise_for_status()
-            self.log.info(f"PUT result: {result.data}")
-            job_id = result.json().job_id
+            self.log.info(f"PUT result: {result.text}")
+            response = result.json()
+            if response.status != "ok":
+                raise salobj.ExpectedError(f"Could not submit job {result.text}")
+            job_id = response.jobId
             status_url = f"{self.config.url}/job/{job_id}"
         else:
             # Simulation mode.
@@ -305,18 +310,20 @@ class OcpsCsc(salobj.ConfigurableCsc):
             result = self.connection.get(status_url)
             result.raise_for_status()
             response = result.json()
-            if response.status != "ok":
-                raise salobj.ExpectedError(f"GET {status_url} failed: {response}")
-            job_id = status_url[-status_url.rindex("/") :]
-            if response.job.state == "running":
-                self.log.debug(f"{status_url} sleeping for {self.config.poll_interval}")
-                await asyncio.sleep(self.config.poll_interval)
-            else:
-                self.log.info(f"{status_url} result: {response}")
+            if response.jobId != job_id:
+                raise salobj.ExpectedError(
+                    f"Job ID mismatch: got {response.jobId} instead of {job_id}"
+                )
+            if response.phase in DONE_PHASES:
+                self.log.info(f"{status_url} result: {response.text}")
+                exit_code = 1 if response.phase != "completed" else 0
                 self.evt_job_result.set_put(
-                    job_id=job_id, exit_code=0, result=response.job
+                    job_id=job_id, exit_code=exit_code, result=response.text
                 )
                 return
+            else:
+                self.log.debug(f"{status_url} sleeping for {self.config.poll_interval}")
+                await asyncio.sleep(self.config.poll_interval)
 
     async def do_abort_job(self, data):
         """Implement the ``abort_job`` command.
