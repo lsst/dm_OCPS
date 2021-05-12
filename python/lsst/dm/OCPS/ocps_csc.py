@@ -252,9 +252,9 @@ class OcpsCsc(salobj.ConfigurableCsc):
             result.raise_for_status()
             self.log.info(f"PUT {result.status_code} result: {result.text}")
             response = result.json()
-            if response.status != "ok":
+            if response['status'] != "ok":
                 raise salobj.ExpectedError(f"Could not submit job {result.text}")
-            job_id = response.jobId
+            job_id = response['jobId']
             status_url = f"{self.config.url}/job/{job_id}"
         else:
             # Simulation mode.
@@ -311,20 +311,23 @@ class OcpsCsc(salobj.ConfigurableCsc):
             self.log.info(f"GET: {status_url}")
             result = self.connection.get(status_url)
             result.raise_for_status()
+            self.log.info(f"{status_url} result: {result.text}")
             response = result.json()
-            if response.jobId != job_id:
+            if response['jobId'] != job_id:
                 raise salobj.ExpectedError(
-                    f"Job ID mismatch: got {response.jobId} instead of {job_id}"
+                    f"Job ID mismatch: got {response['jobId']} instead of {job_id}"
                 )
-            if response.phase in DONE_PHASES:
-                self.log.info(f"{status_url} result: {response.text}")
-                exit_code = 1 if response.phase != "completed" else 0
+            if response['phase'] in DONE_PHASES:
+                exit_code = 1 if response['phase'] != "completed" else 0
                 self.evt_job_result.set_put(
-                    job_id=job_id, exit_code=exit_code, result=response.text
+                    job_id=job_id, exit_code=exit_code, result=result.text
                 )
                 return
             else:
-                self.log.debug(f"{status_url} sleeping for {self.config.poll_interval}")
+                self.log.debug(
+                    f"{status_url} phase {response['phase']}"
+                    f" sleeping for {self.config.poll_interval}"
+                )
                 await asyncio.sleep(self.config.poll_interval)
 
     async def do_abort_job(self, data):
@@ -341,10 +344,10 @@ class OcpsCsc(salobj.ConfigurableCsc):
             self.log.info(f"DELETE: {data.job_id}")
             result = self.connection.delete(f"{self.config.url}/job/{data.job_id}")
             result.raise_for_status()
+            self.log.info(f"Abort result: {result.text}")
             self.evt_job_result.set_put(
-                job_id=data.job_id, exit_code=255, result=result.data
+                job_id=data.job_id, exit_code=255, result=result.text
             )
-            self.log.info(f"Abort result: {result.data}")
         else:
             if data.job_id in self.simulated_jobs:
                 self.simulated_jobs.remove(data.job_id)
