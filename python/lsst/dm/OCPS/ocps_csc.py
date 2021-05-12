@@ -22,6 +22,7 @@ __all__ = ["OcpsCsc", "CONFIG_SCHEMA"]
 
 import asyncio
 import json
+import logging
 import random
 import requests
 import types
@@ -157,6 +158,7 @@ class OcpsCsc(salobj.ConfigurableCsc):
                 event = remote.getattr(trigger.event)
                 event.callback = self.gen_event_callback(trigger)
                 self.trigger_remotes.append(remote)
+        self.log.addHandler(logging.StreamHandler())
 
     def gen_event_callback(self, trigger):
         """Return a callback that triggers a pipeline on an event.
