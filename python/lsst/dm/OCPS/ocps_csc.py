@@ -240,8 +240,9 @@ class OcpsCsc(salobj.ConfigurableCsc):
                 OUTPUT_GLOB=self.config.output_glob,
                 DATA_QUERY=data.data_query,
             )
+            run_id = str(data.private_seqNum)
             payload = dict(
-                run_id=f"{data.private_seqNum}",
+                run_id=run_id,
                 command="pipetask.sh",
                 url="https://github.com/lsst-dm/uws_scripts",
                 commit_ref="master",
@@ -252,7 +253,7 @@ class OcpsCsc(salobj.ConfigurableCsc):
             result.raise_for_status()
             self.log.info(f"PUT {result.status_code} result: {result.text}")
             response = result.json()
-            job_id = response['jobId']
+            job_id = response["jobId"]
             status_url = f"{self.config.url}/job/{job_id}"
         else:
             # Simulation mode.
@@ -311,17 +312,16 @@ class OcpsCsc(salobj.ConfigurableCsc):
             result.raise_for_status()
             self.log.info(f"{status_url} result: {result.text}")
             response = result.json()
-            if response['jobId'] != job_id:
+            if response["jobId"] != job_id:
                 raise salobj.ExpectedError(
                     f"Job ID mismatch: got {response['jobId']} instead of {job_id}"
                 )
-            if response['runId'] != data.private_seqNum:
+            if response["runId"] != run_id:
                 raise salobj.ExpectedError(
-                    f"Run ID mismatch: got {response['runId']}"
-                    f" instead of {data.private_seqNum}"
+                    f"Run ID mismatch: got {response['runId']} instead of {run_id}"
                 )
-            if response['phase'] in DONE_PHASES:
-                exit_code = 1 if response['phase'] != "completed" else 0
+            if response["phase"] in DONE_PHASES:
+                exit_code = 1 if response["phase"] != "completed" else 0
                 self.evt_job_result.set_put(
                     job_id=job_id, exit_code=exit_code, result=result.text
                 )
