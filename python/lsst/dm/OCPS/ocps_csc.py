@@ -241,7 +241,7 @@ class OcpsCsc(salobj.ConfigurableCsc):
                 DATA_QUERY=data.data_query,
             )
             payload = dict(
-                run_id=data.private_seqNum,
+                run_id=f"{data.private_seqNum}",
                 command="pipetask.sh",
                 url="https://github.com/lsst-dm/uws_scripts",
                 commit_ref="master",
