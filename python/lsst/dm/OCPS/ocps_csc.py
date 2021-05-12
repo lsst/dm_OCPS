@@ -243,7 +243,7 @@ class OcpsCsc(salobj.ConfigurableCsc):
                 command="pipetask.sh",
                 url="https://github.com/lsst-dm/uws_scripts",
                 commit_ref="master",
-                environment=[dict(key=k, val=v) for k, v in payload_env.items()],
+                environment=[dict(name=k, value=v) for k, v in payload_env.items()],
             )
             self.log.info(f"PUT {self.config.url}/job: {payload}")
             result = self.connection.put(f"{self.config.url}/job", json=payload)
