@@ -241,14 +241,14 @@ class OcpsCsc(salobj.ConfigurableCsc):
             payload = dict(
                 run_id=data.private_seqNum,
                 command="pipetask.sh",
-                url="https://github.com/uws_scripts",
+                url="https://github.com/lsst-dm/uws_scripts",
                 commit_ref="master",
                 environment=[dict(key=k, val=v) for k, v in payload_env.items()],
             )
-            self.log.info(f"PUT: {payload}")
+            self.log.info(f"PUT {self.config.url}/job: {payload}")
             result = self.connection.put(f"{self.config.url}/job", json=payload)
             result.raise_for_status()
-            self.log.info(f"PUT result: {result.text}")
+            self.log.info(f"PUT {result.status_code} result: {result.text}")
             response = result.json()
             if response.status != "ok":
                 raise salobj.ExpectedError(f"Could not submit job {result.text}")
