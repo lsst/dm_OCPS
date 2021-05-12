@@ -254,7 +254,7 @@ class OcpsCsc(salobj.ConfigurableCsc):
             response = result.json()
             if response['status'] != "ok":
                 raise salobj.ExpectedError(f"Could not submit job {result.text}")
-            job_id = response['jobId']
+            job_id = response['job_id']
             status_url = f"{self.config.url}/job/{job_id}"
         else:
             # Simulation mode.
@@ -316,6 +316,11 @@ class OcpsCsc(salobj.ConfigurableCsc):
             if response['jobId'] != job_id:
                 raise salobj.ExpectedError(
                     f"Job ID mismatch: got {response['jobId']} instead of {job_id}"
+                )
+            if response['runId'] != data.private_seqNum:
+                raise salobj.ExpectedError(
+                    f"Run ID mismatch: got {response['runId']}"
+                    f" instead of {data.private_seqNum}"
                 )
             if response['phase'] in DONE_PHASES:
                 exit_code = 1 if response['phase'] != "completed" else 0
