@@ -233,7 +233,7 @@ class OcpsCsc(salobj.ConfigurableCsc):
             if hasattr(self.config, "input_collection"):
                 run_options = f"-i {self.config.input_collection}"
             payload_env = dict(
-                EUPS_TAG=data.version,
+                IMAGE_TAG=data.version,
                 PIPELINE_URL=data.pipeline,
                 BUTLER_REPO=self.config.butler,
                 RUN_OPTIONS=" ".join((run_options, data.config)),
@@ -243,7 +243,7 @@ class OcpsCsc(salobj.ConfigurableCsc):
             run_id = str(data.private_seqNum)
             payload = dict(
                 run_id=run_id,
-                command="pipetask.sh",
+                command="cd $JOB_SOURCE_DIR && bash bin/pipetask.sh",
                 url="https://github.com/lsst-dm/uws_scripts",
                 commit_ref="master",
                 environment=[dict(name=k, value=v) for k, v in payload_env.items()],
