@@ -233,16 +233,17 @@ class OcpsCsc(salobj.ConfigurableCsc):
             if hasattr(self.config, "input_collection"):
                 run_options = f"-i {self.config.input_collection}"
             payload_env = dict(
-                EUPS_TAG=data.version,
+                IMAGE_TAG=data.version,
                 PIPELINE_URL=data.pipeline,
                 BUTLER_REPO=self.config.butler,
                 RUN_OPTIONS=" ".join((run_options, data.config)),
                 OUTPUT_GLOB=self.config.output_glob,
                 DATA_QUERY=data.data_query,
             )
+            run_id = str(data.private_seqNum)
             payload = dict(
-                run_id=f"{data.private_seqNum}",
-                command="pipetask.sh",
+                run_id=run_id,
+                command="cd $JOB_SOURCE_DIR && bash bin/pipetask.sh",
                 url="https://github.com/lsst-dm/uws_scripts",
                 commit_ref="master",
                 environment=[dict(name=k, value=v) for k, v in payload_env.items()],
@@ -252,9 +253,7 @@ class OcpsCsc(salobj.ConfigurableCsc):
             result.raise_for_status()
             self.log.info(f"PUT {result.status_code} result: {result.text}")
             response = result.json()
-            if response['status'] != "ok":
-                raise salobj.ExpectedError(f"Could not submit job {result.text}")
-            job_id = response['jobId']
+            job_id = response["jobId"]
             status_url = f"{self.config.url}/job/{job_id}"
         else:
             # Simulation mode.
@@ -313,12 +312,16 @@ class OcpsCsc(salobj.ConfigurableCsc):
             result.raise_for_status()
             self.log.info(f"{status_url} result: {result.text}")
             response = result.json()
-            if response['jobId'] != job_id:
+            if response["jobId"] != job_id:
                 raise salobj.ExpectedError(
                     f"Job ID mismatch: got {response['jobId']} instead of {job_id}"
                 )
-            if response['phase'] in DONE_PHASES:
-                exit_code = 1 if response['phase'] != "completed" else 0
+            if response["runId"] != run_id:
+                raise salobj.ExpectedError(
+                    f"Run ID mismatch: got {response['runId']} instead of {run_id}"
+                )
+            if response["phase"] in DONE_PHASES:
+                exit_code = 1 if response["phase"] != "completed" else 0
                 self.evt_job_result.set_put(
                     job_id=job_id, exit_code=exit_code, result=result.text
                 )
