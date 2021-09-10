@@ -57,29 +57,6 @@ properties:
   output_glob:
     description: Glob pattern for output dataset types
     type: string
-  triggers:
-    description: Events and the pipelines they should trigger
-    type: array
-    items:
-      type: object
-      properties:
-        csc:
-          description: CSC from which the event will arrive
-          type: string
-        event:
-          description: Name of the event that should be waited for
-          type: string
-        version:
-          description: EUPS tag to setup
-          type: string
-        pipeline:
-          description: Pipeline to execute upon receipt
-          type: string
-        data_query_expr:
-          description: Expression to determine data query
-          type: string
-      required: ["csc", "event", "pipeline", "data_query_expr"]
-      additionalProperties: false
 required:
   - url
   - poll_interval
@@ -90,7 +67,6 @@ additionalProperties: false
 )
 
 DONE_PHASES = ["completed", "error", "aborted", "unknown"]
-
 
 class OcpsCsc(salobj.ConfigurableCsc):
     """CSC for the OCS-Controlled Pipeline Service.
@@ -147,50 +123,7 @@ class OcpsCsc(salobj.ConfigurableCsc):
             simulation_mode=simulation_mode,
         )
         self.cmd_execute.allow_multiple_callbacks = True
-        if hasattr(self.config, "triggers"):
-            self.trigger_remotes = []
-            for trigger in self.config.triggers:
-                remote = salobj.Remote(
-                    domain=self.domain,
-                    name=trigger.csc,
-                    include=[trigger.event],
-                )
-                event = remote.getattr(trigger.event)
-                event.callback = self.gen_event_callback(trigger)
-                self.trigger_remotes.append(remote)
         self.log.addHandler(logging.StreamHandler())
-
-    def gen_event_callback(self, trigger):
-        """Return a callback that triggers a pipeline on an event.
-
-        Parameters
-        ----------
-        trigger: types.SimpleNamespace
-            Must contain version, pipeline, data_query_expr attributes
-
-        Notes
-        -----
-        version: str
-            Science Pipelines version as an EUPS tag
-        pipeline: str
-            URL of pipeline YAML
-        data_query_expr: str
-            String to generate a data query expression for "pipetask run",
-            formatted with ``.format(data=data)`` so ``{data.attr}``
-            substitutions can be used
-        """
-
-        async def event_callback(self, data):
-            self.log.info(f"Event {trigger.event} occurred: {data}")
-            data.version = trigger.version
-            data.pipeline = trigger.pipeline
-            data.config = ""
-            data.data_query = trigger.data_query_expr.format(event=data)
-            self.log.info(f"Calling _execute with {data}")
-            # TODO DM-30032: complete event-triggered execution
-            # self._execute(data)
-
-        return event_callback
 
     async def do_execute(self, data):
         """Implement the ``execute`` command.
