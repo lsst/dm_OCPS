@@ -20,6 +20,7 @@
 import asyncio
 import shlex
 from lsst.ts.salobj import CscCommander
+from lsst.dm.OCPS import OcpsIndex
 
 
 class OcpsCscCommander(CscCommander):
@@ -33,4 +34,4 @@ class OcpsCscCommander(CscCommander):
         await self.run_command_topic("execute", shlex.split(" ".join(args)))
 
 
-asyncio.run(OcpsCscCommander.amain(index=None))
+asyncio.run(OcpsCscCommander.amain(index=OcpsIndex))

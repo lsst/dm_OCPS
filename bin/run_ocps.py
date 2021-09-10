@@ -21,4 +21,4 @@ import asyncio
 
 from lsst.dm import OCPS
 
-asyncio.run(OCPS.OcpsCsc.amain(index=None))
+asyncio.run(OCPS.OcpsCsc.amain(index=OCPS.OcpsIndex))
