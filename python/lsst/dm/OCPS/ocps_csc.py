@@ -18,9 +18,10 @@
 #
 # You should have received a copy of the GNU General Public License
 
-__all__ = ["OcpsCsc", "CONFIG_SCHEMA"]
+__all__ = ["OcpsCsc", "OcpsIndex", "CONFIG_SCHEMA"]
 
 import asyncio
+import enum
 import json
 import logging
 import random
@@ -36,10 +37,13 @@ CONFIG_SCHEMA = yaml.safe_load(
 $schema: http://json-schema.org/draft-07/schema#
 $id: https://github.com/lsst/dm_OCPS/blob/master/schema/OCPS.yaml
 # title must end with one or more spaces followed by the schema version, which must begin with "v"
-title: OCPS v2
+title: OCPS v3
 description: Schema for OCPS configuration files
 type: object
 properties:
+  instance:
+    description: Name of OCPS instance this configuration is for; checked against index enum
+    type: string
   url:
     description: URL of the REST API endpoint of the execution service
     type: string
@@ -58,6 +62,7 @@ properties:
     description: Glob pattern for output dataset types
     type: string
 required:
+  - instance
   - url
   - poll_interval
   - butler
@@ -68,6 +73,13 @@ additionalProperties: false
 
 DONE_PHASES = ["completed", "error", "aborted", "unknown"]
 
+
+class OcpsIndex(enum.IntEnum):
+    LATISS = 1
+    LSSTComCam = 2
+    LSSTCam = 3
+
+
 class OcpsCsc(salobj.ConfigurableCsc):
     """CSC for the OCS-Controlled Pipeline Service.
 
@@ -75,6 +87,8 @@ class OcpsCsc(salobj.ConfigurableCsc):
 
     Parameters
     ----------
+    index: `int` or `OcpsIndex`
+        CSC SAL index.
     simulation_mode: `int` (optional)
         Simulation mode.
 
@@ -106,6 +120,7 @@ class OcpsCsc(salobj.ConfigurableCsc):
 
     def __init__(
         self,
+        index,
         config_dir=None,
         initial_state=salobj.State.STANDBY,
         settings_to_apply="",
@@ -113,9 +128,10 @@ class OcpsCsc(salobj.ConfigurableCsc):
     ):
         self.config = None
         self.simulated_jobs = set()
+        self.index = OcpsIndex(index)
         super().__init__(
             "OCPS",
-            index=0,
+            index=index,
             config_schema=CONFIG_SCHEMA,
             config_dir=config_dir,
             initial_state=initial_state,
@@ -302,5 +318,10 @@ class OcpsCsc(salobj.ConfigurableCsc):
     async def configure(self, config: types.SimpleNamespace):
         self.log.info(f"Configuring with {config}")
         self.config = config
+        if self.index != OcpsIndex[self.config.instance]:
+            raise salobj.ExpectedError(
+                f"Configuration instance '{self.config.instance}'"
+                f" does not match CSC index '{self.index}'"
+            )
         if self.simulation_mode == 0:
             self.connection = requests.Session()
