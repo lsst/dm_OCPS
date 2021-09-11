@@ -1,3 +1,4 @@
+instance: LATISS
 url: "this is not a real url but still parses"
 poll_interval: "none"
 butler: /repo/LATISS
