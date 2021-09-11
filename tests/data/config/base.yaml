@@ -1,3 +1,4 @@
+instance: LATISS
 url: https://ocps-exec.ls.lsst.org/exec
 poll_interval: 0.5
 butler: /repo/LATISS

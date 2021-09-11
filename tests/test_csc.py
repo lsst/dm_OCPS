@@ -18,6 +18,7 @@
 #
 # You should have received a copy of the GNU General Public License
 
+import asyncio
 import glob
 import json
 import os
@@ -34,13 +35,20 @@ TEST_CONFIG_DIR = pathlib.Path(__file__).parents[1].joinpath("tests", "data", "c
 
 class CscTestCase(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase):
     def basic_make_csc(
-        self, initial_state, config_dir, simulation_mode, settings_to_apply="", **kwargs
+        self,
+        initial_state,
+        config_dir,
+        simulation_mode,
+        index=1,
+        settings_to_apply="",
+        **kwargs,
     ):
         return OCPS.OcpsCsc(
             initial_state=initial_state,
             config_dir=config_dir,
             settings_to_apply=settings_to_apply,
             simulation_mode=simulation_mode,
+            index=index,
         )
 
     async def test_default_config_dir(self):
@@ -48,6 +56,7 @@ class CscTestCase(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase):
             initial_state=salobj.State.STANDBY,
             config_dir=None,
             simulation_mode=1,
+            index=2,
         ):
             self.assertEqual(self.csc.summary_state, salobj.State.STANDBY)
             await self.assert_next_summary_state(salobj.State.STANDBY)
@@ -55,7 +64,7 @@ class CscTestCase(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase):
             desired_config_pkg_name = "dm_config_ocps"
             desired_config_env_name = desired_config_pkg_name.upper() + "_DIR"
             desired_config_pkg_dir = os.environ[desired_config_env_name]
-            desired_config_dir = pathlib.Path(desired_config_pkg_dir) / "OCPS/v2"
+            desired_config_dir = pathlib.Path(desired_config_pkg_dir) / "OCPS/v3"
             self.assertEqual(self.csc.get_config_pkg(), desired_config_pkg_name)
             self.assertEqual(self.csc.config_dir, desired_config_dir)
 
@@ -64,6 +73,7 @@ class CscTestCase(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase):
             initial_state=salobj.State.STANDBY,
             config_dir=TEST_CONFIG_DIR,
             simulation_mode=1,
+            index=1,
         ):
             self.assertEqual(self.csc.summary_state, salobj.State.STANDBY)
             await self.assert_next_summary_state(salobj.State.STANDBY)
@@ -96,14 +106,22 @@ class CscTestCase(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase):
                 self.assertEqual(getattr(self.csc.config, field), value)
 
     async def test_bin_script(self):
-        await self.check_bin_script(name="OCPS", index=None, exe_name="run_ocps.py")
+        await self.check_bin_script(name="OCPS", index=1, exe_name="run_ocps.py")
+        await self.check_bin_script(name="OCPS", index=2, exe_name="run_ocps.py")
+        with self.assertRaises(asyncio.exceptions.TimeoutError):
+            await self.check_bin_script(
+                name="OCPS", index=4, exe_name="run_ocps.py", timeout=5
+            )
 
     async def test_standard_state_transitions(self):
         async with self.make_csc(
-            initial_state=salobj.State.STANDBY, config_dir=None, simulation_mode=1
+            initial_state=salobj.State.STANDBY,
+            config_dir=None,
+            simulation_mode=1,
+            index=2,
         ):
             await self.check_standard_state_transitions(
-                settingsToApply="default",
+                settingsToApply="LSSTComCam",
                 enabled_commands=(
                     "execute",
                     "abort_job",
@@ -114,8 +132,9 @@ class CscTestCase(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase):
         async with self.make_csc(
             initial_state=salobj.State.ENABLED,
             config_dir=None,
-            settings_to_apply="default",
+            settings_to_apply="LATISS",
             simulation_mode=1,
+            index=1,
         ):
             for pipeline, result in (("true.yaml", True), ("false.yaml", False)):
                 ack = await self.remote.cmd_execute.set_start(
