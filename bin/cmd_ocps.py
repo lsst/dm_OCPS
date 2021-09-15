@@ -20,17 +20,11 @@
 import asyncio
 import shlex
 from lsst.ts.salobj import CscCommander
+from lsst.dm.OCPS import OcpsIndex
 
 
-class OcpsCscCommander(CscCommander):
-    def __init__(self, *args, **kwargs):
-        super().__init__(name="OCPS", *args, **kwargs)
-        for command in ("abort", "enterControl", "setValue"):
-            del self.command_dict[command]
-
-    async def do_execute(self, args):
-        # Re-parse to handle quotes
-        await self.run_command_topic("execute", shlex.split(" ".join(args)))
-
-
-asyncio.run(OcpsCscCommander.amain(index=None))
+asyncio.run(
+    CscCommander.amain(
+        "OCPS", index=OcpsIndex, exclude_commands=["abort", "enterControl", "setValue"]
+    )
+)

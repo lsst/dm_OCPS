@@ -29,6 +29,7 @@ import types
 import yaml
 
 from lsst.ts import salobj
+from lsst.ts.idl.enums.OCPS import SalIndex
 from . import __version__
 
 CONFIG_SCHEMA = yaml.safe_load(
@@ -36,10 +37,18 @@ CONFIG_SCHEMA = yaml.safe_load(
 $schema: http://json-schema.org/draft-07/schema#
 $id: https://github.com/lsst/dm_OCPS/blob/master/schema/OCPS.yaml
 # title must end with one or more spaces followed by the schema version, which must begin with "v"
-title: OCPS v2
+title: OCPS v3
 description: Schema for OCPS configuration files
 type: object
 properties:
+  instance:
+    description: >
+      Name of the OCPS instance this configuration is for.  Since
+      configurations for all indexed instances come from the same
+      dm_config_ocps repo, this name is checked at start command time against
+      the index (SalIndex enum) of the CSC.  This ensures that only appropriate
+      configurations can be used.
+    type: string
   url:
     description: URL of the REST API endpoint of the execution service
     type: string
@@ -57,30 +66,8 @@ properties:
   output_glob:
     description: Glob pattern for output dataset types
     type: string
-  triggers:
-    description: Events and the pipelines they should trigger
-    type: array
-    items:
-      type: object
-      properties:
-        csc:
-          description: CSC from which the event will arrive
-          type: string
-        event:
-          description: Name of the event that should be waited for
-          type: string
-        version:
-          description: EUPS tag to setup
-          type: string
-        pipeline:
-          description: Pipeline to execute upon receipt
-          type: string
-        data_query_expr:
-          description: Expression to determine data query
-          type: string
-      required: ["csc", "event", "pipeline", "data_query_expr"]
-      additionalProperties: false
 required:
+  - instance
   - url
   - poll_interval
   - butler
@@ -99,6 +86,8 @@ class OcpsCsc(salobj.ConfigurableCsc):
 
     Parameters
     ----------
+    index: `int` or `lsst.ts.idl.enums.OCPS.SalIndex`
+        CSC SAL index.
     simulation_mode: `int` (optional)
         Simulation mode.
 
@@ -130,6 +119,7 @@ class OcpsCsc(salobj.ConfigurableCsc):
 
     def __init__(
         self,
+        index,
         config_dir=None,
         initial_state=salobj.State.STANDBY,
         settings_to_apply="",
@@ -139,7 +129,7 @@ class OcpsCsc(salobj.ConfigurableCsc):
         self.simulated_jobs = set()
         super().__init__(
             "OCPS",
-            index=0,
+            index=index,
             config_schema=CONFIG_SCHEMA,
             config_dir=config_dir,
             initial_state=initial_state,
@@ -147,50 +137,7 @@ class OcpsCsc(salobj.ConfigurableCsc):
             simulation_mode=simulation_mode,
         )
         self.cmd_execute.allow_multiple_callbacks = True
-        if hasattr(self.config, "triggers"):
-            self.trigger_remotes = []
-            for trigger in self.config.triggers:
-                remote = salobj.Remote(
-                    domain=self.domain,
-                    name=trigger.csc,
-                    include=[trigger.event],
-                )
-                event = remote.getattr(trigger.event)
-                event.callback = self.gen_event_callback(trigger)
-                self.trigger_remotes.append(remote)
         self.log.addHandler(logging.StreamHandler())
-
-    def gen_event_callback(self, trigger):
-        """Return a callback that triggers a pipeline on an event.
-
-        Parameters
-        ----------
-        trigger: types.SimpleNamespace
-            Must contain version, pipeline, data_query_expr attributes
-
-        Notes
-        -----
-        version: str
-            Science Pipelines version as an EUPS tag
-        pipeline: str
-            URL of pipeline YAML
-        data_query_expr: str
-            String to generate a data query expression for "pipetask run",
-            formatted with ``.format(data=data)`` so ``{data.attr}``
-            substitutions can be used
-        """
-
-        async def event_callback(self, data):
-            self.log.info(f"Event {trigger.event} occurred: {data}")
-            data.version = trigger.version
-            data.pipeline = trigger.pipeline
-            data.config = ""
-            data.data_query = trigger.data_query_expr.format(event=data)
-            self.log.info(f"Calling _execute with {data}")
-            # TODO DM-30032: complete event-triggered execution
-            # self._execute(data)
-
-        return event_callback
 
     async def do_execute(self, data):
         """Implement the ``execute`` command.
@@ -369,5 +316,11 @@ class OcpsCsc(salobj.ConfigurableCsc):
     async def configure(self, config: types.SimpleNamespace):
         self.log.info(f"Configuring with {config}")
         self.config = config
+        index = SalIndex(self.salinfo.index)
+        if index != SalIndex[self.config.instance]:
+            raise salobj.ExpectedError(
+                f"Configuration instance '{self.config.instance}'"
+                f" does not match CSC index '{index!r}'"
+            )
         if self.simulation_mode == 0:
             self.connection = requests.Session()

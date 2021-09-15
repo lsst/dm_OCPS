@@ -1,3 +1,4 @@
+instance: LATISS
 url: http://uws-api-server.nts.svc.cluster.local/job
 poll_interval: 0.8
 butler: /repo/LATISS
