@@ -18,10 +18,9 @@
 #
 # You should have received a copy of the GNU General Public License
 
-__all__ = ["OcpsCsc", "OcpsIndex", "CONFIG_SCHEMA"]
+__all__ = ["OcpsCsc", "CONFIG_SCHEMA"]
 
 import asyncio
-import enum
 import json
 import logging
 import random
@@ -30,6 +29,7 @@ import types
 import yaml
 
 from lsst.ts import salobj
+from lsst.ts.idl.enums.OCPS import SalIndex
 from . import __version__
 
 CONFIG_SCHEMA = yaml.safe_load(
@@ -79,12 +79,6 @@ additionalProperties: false
 DONE_PHASES = ["completed", "error", "aborted", "unknown"]
 
 
-class OcpsIndex(enum.IntEnum):
-    LATISS = 1
-    LSSTComCam = 2
-    LSSTCam = 3
-
-
 class OcpsCsc(salobj.ConfigurableCsc):
     """CSC for the OCS-Controlled Pipeline Service.
 
@@ -92,7 +86,7 @@ class OcpsCsc(salobj.ConfigurableCsc):
 
     Parameters
     ----------
-    index: `int` or `OcpsIndex`
+    index: `int` or `lsst.ts.idl.enums.OCPS.SalIndex`
         CSC SAL index.
     simulation_mode: `int` (optional)
         Simulation mode.
@@ -322,8 +316,8 @@ class OcpsCsc(salobj.ConfigurableCsc):
     async def configure(self, config: types.SimpleNamespace):
         self.log.info(f"Configuring with {config}")
         self.config = config
-        index = OcpsIndex(self.salinfo.index)
-        if index != OcpsIndex[self.config.instance]:
+        index = SalIndex(self.salinfo.index)
+        if index != SalIndex[self.config.instance]:
             raise salobj.ExpectedError(
                 f"Configuration instance '{self.config.instance}'"
                 f" does not match CSC index '{index!r}'"
