@@ -39,7 +39,7 @@ class CscTestCase(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase):
         initial_state,
         config_dir,
         simulation_mode,
-        index=1,
+        index=OCPS.OcpsIndex.LATISS,
         settings_to_apply="",
         **kwargs,
     ):
@@ -56,7 +56,7 @@ class CscTestCase(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase):
             initial_state=salobj.State.STANDBY,
             config_dir=None,
             simulation_mode=1,
-            index=2,
+            index=OCPS.OcpsIndex.LSSTComCam,
         ):
             self.assertEqual(self.csc.summary_state, salobj.State.STANDBY)
             await self.assert_next_summary_state(salobj.State.STANDBY)
@@ -73,7 +73,7 @@ class CscTestCase(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase):
             initial_state=salobj.State.STANDBY,
             config_dir=TEST_CONFIG_DIR,
             simulation_mode=1,
-            index=1,
+            index=OCPS.OcpsIndex.LATISS,
         ):
             self.assertEqual(self.csc.summary_state, salobj.State.STANDBY)
             await self.assert_next_summary_state(salobj.State.STANDBY)
@@ -106,8 +106,8 @@ class CscTestCase(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase):
                 self.assertEqual(getattr(self.csc.config, field), value)
 
     async def test_bin_script(self):
-        await self.check_bin_script(name="OCPS", index=1, exe_name="run_ocps.py")
-        await self.check_bin_script(name="OCPS", index=2, exe_name="run_ocps.py")
+        await self.check_bin_script(name="OCPS", index=OCPS.OcpsIndex.LATISS, exe_name="run_ocps.py")
+        await self.check_bin_script(name="OCPS", index=OCPS.OcpsIndex.LSSTComCam, exe_name="run_ocps.py")
         with self.assertRaises(asyncio.exceptions.TimeoutError):
             await self.check_bin_script(
                 name="OCPS", index=4, exe_name="run_ocps.py", timeout=5
@@ -118,7 +118,7 @@ class CscTestCase(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase):
             initial_state=salobj.State.STANDBY,
             config_dir=None,
             simulation_mode=1,
-            index=2,
+            index=OCPS.OcpsIndex.LSSTComCam,
         ):
             await self.check_standard_state_transitions(
                 settingsToApply="LSSTComCam",
@@ -134,7 +134,7 @@ class CscTestCase(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase):
             config_dir=None,
             settings_to_apply="LATISS",
             simulation_mode=1,
-            index=1,
+            index=OCPS.OcpsIndex.LATISS,
         ):
             for pipeline, result in (("true.yaml", True), ("false.yaml", False)):
                 ack = await self.remote.cmd_execute.set_start(
