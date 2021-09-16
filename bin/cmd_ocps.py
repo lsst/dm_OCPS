@@ -18,7 +18,6 @@
 # GNU General Public License for more details.
 #
 import asyncio
-import shlex
 from lsst.ts.salobj import CscCommander
 from lsst.dm.OCPS import OcpsIndex
 
