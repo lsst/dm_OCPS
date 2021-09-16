@@ -108,10 +108,10 @@ class CscTestCase(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase):
 
     async def test_bin_script(self):
         await self.check_bin_script(
-            name="OCPS", index=SalIndex.LATISS, exe_name="run_ocps.py"
+            name="OCPS", index=int(SalIndex.LATISS), exe_name="run_ocps.py"
         )
         await self.check_bin_script(
-            name="OCPS", index=SalIndex.LSSTComCam, exe_name="run_ocps.py"
+            name="OCPS", index=int(SalIndex.LSSTComCam), exe_name="run_ocps.py"
         )
         with self.assertRaises(asyncio.exceptions.TimeoutError):
             await self.check_bin_script(
