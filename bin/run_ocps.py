@@ -20,5 +20,6 @@
 import asyncio
 
 from lsst.dm import OCPS
+from lsst.ts.idl.enums.OCPS import SalIndex
 
-asyncio.run(OCPS.OcpsCsc.amain(index=OCPS.OcpsIndex))
+asyncio.run(OCPS.OcpsCsc.amain(index=SalIndex))
