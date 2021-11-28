@@ -35,7 +35,7 @@ from . import __version__
 CONFIG_SCHEMA = yaml.safe_load(
     """
 $schema: http://json-schema.org/draft-07/schema#
-$id: https://github.com/lsst/dm_OCPS/blob/master/schema/OCPS.yaml
+$id: https://github.com/lsst/dm_OCPS/blob/main/schema/OCPS.yaml
 # title must end with one or more spaces followed by the schema version, which must begin with "v"
 title: OCPS v3
 description: Schema for OCPS configuration files
@@ -192,7 +192,7 @@ class OcpsCsc(salobj.ConfigurableCsc):
                 run_id=run_id,
                 command="cd $JOB_SOURCE_DIR && bash bin/pipetask.sh",
                 url="https://github.com/lsst-dm/uws_scripts",
-                commit_ref="master",
+                commit_ref="main",
                 environment=[dict(name=k, value=v) for k, v in payload_env.items()],
             )
             self.log.info(f"PUT {self.config.url}/job: {payload}")
