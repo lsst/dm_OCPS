@@ -30,6 +30,7 @@ import yaml
 
 from lsst.ts import salobj
 from lsst.ts.idl.enums.OCPS import SalIndex
+from lsst.ts.utils import current_tai
 from . import __version__
 
 CONFIG_SCHEMA = yaml.safe_load(
@@ -37,7 +38,7 @@ CONFIG_SCHEMA = yaml.safe_load(
 $schema: http://json-schema.org/draft-07/schema#
 $id: https://github.com/lsst/dm_OCPS/blob/main/schema/OCPS.yaml
 # title must end with one or more spaces followed by the schema version, which must begin with "v"
-title: OCPS v3
+title: OCPS v4
 description: Schema for OCPS configuration files
 type: object
 properties:
@@ -122,7 +123,7 @@ class OcpsCsc(salobj.ConfigurableCsc):
         index,
         config_dir=None,
         initial_state=salobj.State.STANDBY,
-        settings_to_apply="",
+        override="",
         simulation_mode=0,
     ):
         self.config = None
@@ -133,7 +134,7 @@ class OcpsCsc(salobj.ConfigurableCsc):
             config_schema=CONFIG_SCHEMA,
             config_dir=config_dir,
             initial_state=initial_state,
-            settings_to_apply=settings_to_apply,
+            override=override,
             simulation_mode=simulation_mode,
         )
         self.cmd_execute.allow_multiple_callbacks = True
@@ -210,14 +211,14 @@ class OcpsCsc(salobj.ConfigurableCsc):
                 raise salobj.ExpectedError(
                     f"Unknown (simulated) pipeline: {data.pipeline}"
                 )
-            job_id = f"{data.pipeline}-{salobj.current_tai()}"
+            job_id = f"{data.pipeline}-{current_tai()}"
             status_url = f"ocps://{job_id}"
             self.log.info(f"Simulated PUT result: {status_url}")
             self.simulated_jobs.add(job_id)
 
         payload = json.dumps(dict(job_id=job_id))
         # TODO DM-30032: change to a custom event
-        self.cmd_execute.ack_in_progress(data, timeout=600.0, result=payload)
+        await self.cmd_execute.ack_in_progress(data, timeout=600.0, result=payload)
         self.log.info(f"Ack in progress: {payload}")
         self.log.info(f"Starting async wait: {status_url}")
 
@@ -235,16 +236,16 @@ class OcpsCsc(salobj.ConfigurableCsc):
                 self.simulated_jobs.remove(job_id)
                 if job_id.startswith("true.yaml-"):
                     payload = json.dumps(dict(result=True))
-                    self.evt_job_result.set_put(
+                    await self.evt_job_result.set_write(
                         job_id=job_id, exit_code=0, result=payload
                     )
                 elif job_id.startswith("false.yaml-"):
                     payload = json.dumps(dict(result=False))
-                    self.evt_job_result.set_put(
+                    await self.evt_job_result.set_write(
                         job_id=job_id, exit_code=0, result=payload
                     )
                 elif job_id.startswith("fault.yaml-"):
-                    self.fault(
+                    await self.fault(
                         code=2, report="404 Simulation cannot contact execution service"
                     )
                     raise salobj.ExpectedError("Failed to connect (simulated)")
@@ -269,7 +270,7 @@ class OcpsCsc(salobj.ConfigurableCsc):
                 )
             if response["phase"] in DONE_PHASES:
                 exit_code = 1 if response["phase"] != "completed" else 0
-                self.evt_job_result.set_put(
+                await self.evt_job_result.set_write(
                     job_id=job_id, exit_code=exit_code, result=result.text
                 )
                 return
@@ -295,14 +296,14 @@ class OcpsCsc(salobj.ConfigurableCsc):
             result = self.connection.delete(f"{self.config.url}/job/{data.job_id}")
             result.raise_for_status()
             self.log.info(f"Abort result: {result.text}")
-            self.evt_job_result.set_put(
+            await self.evt_job_result.set_write(
                 job_id=data.job_id, exit_code=255, result=result.text
             )
         else:
             if data.job_id in self.simulated_jobs:
                 self.simulated_jobs.remove(data.job_id)
-                payload = json.dumps(dict(abort_time=salobj.current_tai()))
-                self.evt_job_result.set_put(
+                payload = json.dumps(dict(abort_time=current_tai()))
+                await self.evt_job_result.set_write(
                     job_id=data.job_id, exit_code=255, result=payload
                 )
                 self.log.info(f"Abort result: {payload}")

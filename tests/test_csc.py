@@ -41,13 +41,13 @@ class CscTestCase(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase):
         config_dir,
         simulation_mode,
         index=SalIndex.LATISS,
-        settings_to_apply="",
+        override="",
         **kwargs,
     ):
         return OCPS.OcpsCsc(
             initial_state=initial_state,
             config_dir=config_dir,
-            settings_to_apply=settings_to_apply,
+            override=override,
             simulation_mode=simulation_mode,
             index=index,
         )
@@ -86,11 +86,11 @@ class CscTestCase(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase):
                 with self.subTest(bad_config_name=bad_config_name):
                     with salobj.assertRaisesAckError():
                         await self.remote.cmd_start.set_start(
-                            settingsToApply=bad_config_name, timeout=STD_TIMEOUT
+                            override=bad_config_name, timeout=STD_TIMEOUT
                         )
 
             await self.remote.cmd_start.set_start(
-                settingsToApply="all_fields", timeout=STD_TIMEOUT
+                override="all_fields", timeout=STD_TIMEOUT
             )
             await self.assert_next_sample(
                 self.remote.evt_softwareVersions,
@@ -126,7 +126,7 @@ class CscTestCase(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase):
             index=SalIndex.LSSTComCam,
         ):
             await self.check_standard_state_transitions(
-                settingsToApply="LSSTComCam",
+                override="LSSTComCam",
                 enabled_commands=(
                     "execute",
                     "abort_job",
@@ -137,7 +137,7 @@ class CscTestCase(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase):
         async with self.make_csc(
             initial_state=salobj.State.ENABLED,
             config_dir=None,
-            settings_to_apply="LATISS",
+            override="LATISS",
             simulation_mode=1,
             index=SalIndex.LATISS,
         ):
