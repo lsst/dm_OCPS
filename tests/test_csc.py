@@ -90,7 +90,7 @@ class CscTestCase(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase):
                         )
 
             await self.remote.cmd_start.set_start(
-                override="all_fields", timeout=STD_TIMEOUT
+                override="all_fields.yaml", timeout=STD_TIMEOUT
             )
             await self.assert_next_sample(
                 self.remote.evt_softwareVersions,
@@ -103,7 +103,7 @@ class CscTestCase(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase):
             with open(all_fields_path, "r") as f:
                 all_fields_raw = f.read()
             all_fields_data = yaml.safe_load(all_fields_raw)
-            for field, value in all_fields_data.items():
+            for field, value in all_fields_data["instances"][0].items():
                 self.assertEqual(getattr(self.csc.config, field), value)
 
     async def test_bin_script(self):
@@ -126,7 +126,7 @@ class CscTestCase(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase):
             index=SalIndex.LSSTComCam,
         ):
             await self.check_standard_state_transitions(
-                override="LSSTComCam",
+                override="LSSTComCam.yaml",
                 enabled_commands=(
                     "execute",
                     "abort_job",
@@ -137,7 +137,7 @@ class CscTestCase(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase):
         async with self.make_csc(
             initial_state=salobj.State.ENABLED,
             config_dir=None,
-            override="LATISS",
+            override="LATISS.yaml",
             simulation_mode=1,
             index=SalIndex.LATISS,
         ):

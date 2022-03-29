@@ -42,37 +42,49 @@ title: OCPS v4
 description: Schema for OCPS configuration files
 type: object
 properties:
-  instance:
-    description: >
-      Name of the OCPS instance this configuration is for.  Since
-      configurations for all indexed instances come from the same
-      dm_config_ocps repo, this name is checked at start command time against
-      the index (SalIndex enum) of the CSC.  This ensures that only appropriate
-      configurations can be used.
-    type: string
-  url:
-    description: URL of the REST API endpoint of the execution service
-    type: string
-    format: url
-  poll_interval:
-    description: Time between polls for status of executing pipelines (sec)
-    type: number
-    exclusiveMinimum: 0
-  butler:
-    description: Path/URI of Butler repo
-    type: string
-  input_collection:
-    description: Name of default input collection (optional)
-    type: string
-  output_glob:
-    description: Glob pattern for output dataset types
-    type: string
+  instances:
+    type: array
+    description: Configuration for each OCPS instance
+    minItem: 1
+    items:
+      type: object
+      properties:
+        sal_index:
+          type: integer
+          description: SAL index of OCPS instance
+        instance:
+          description: >
+            Name of the OCPS instance this configuration is for.
+            Primarily for documentation purposes, as the sal_index determines
+            which configuration is loaded.
+          type: string
+        url:
+          description: URL of the REST API endpoint of the execution service
+          type: string
+          format: url
+        poll_interval:
+          description: Time between polls for status of executing pipelines (sec)
+          type: number
+          exclusiveMinimum: 0
+        butler:
+          description: Path/URI of Butler repo
+          type: string
+        input_collection:
+          description: Name of default input collection (optional)
+          type: string
+        output_glob:
+          description: Glob pattern for output dataset types
+          type: string
+      required:
+        - sal_index
+        - instance
+        - url
+        - poll_interval
+        - butler
+        - output_glob
+      additionalProperties: false
 required:
-  - instance
-  - url
-  - poll_interval
-  - butler
-  - output_glob
+  - instances
 additionalProperties: false
 """
 )
@@ -315,13 +327,22 @@ class OcpsCsc(salobj.ConfigurableCsc):
         return "dm_config_ocps"
 
     async def configure(self, config: types.SimpleNamespace):
-        self.log.info(f"Configuring with {config}")
-        self.config = config
+        self.config = None
+        for c in config.instances:
+            if c["sal_index"] == self.salinfo.index:
+                if self.config is not None:
+                    raise salobj.ExpectedError(
+                        f"Configuration instance {self.config} already"
+                        f" exists when {c} is seen"
+                    )
+                else:
+                    self.config = c
         index = SalIndex(self.salinfo.index)
         if index != SalIndex[self.config.instance]:
             raise salobj.ExpectedError(
                 f"Configuration instance '{self.config.instance}'"
                 f" does not match CSC index '{index!r}'"
             )
+        self.log.info(f"Configuring with {self.config}")
         if self.simulation_mode == 0:
             self.connection = requests.Session()
