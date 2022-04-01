@@ -147,8 +147,6 @@ class CscTestCase(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase):
                     config="ignored",
                     wait_done=False,
                 )
-                self.assertEqual(ack.ack, salobj.SalRetCode.CMD_ACK)
-                ack = await self.remote.cmd_execute.next_ackcmd(ack, wait_done=False)
                 self.assertEqual(ack.ack, salobj.SalRetCode.CMD_INPROGRESS)
                 job_id = json.loads(ack.result)["job_id"]
                 self.assertTrue(
