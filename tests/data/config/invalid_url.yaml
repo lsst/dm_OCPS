@@ -1,5 +1,7 @@
-instance: LATISS
-poll_interval: 0.8
-butler: /repo/LATISS
-input_collection: LATISS/defaults,LATISS/raw/all
-output_glob: "*_metricvalue"
+instances:
+  - sal_index: 1
+    instance: LATISS
+    poll_interval: 0.8
+    butler: /repo/LATISS
+    input_collection: LATISS/defaults,LATISS/raw/all
+    output_glob: "*_metricvalue"

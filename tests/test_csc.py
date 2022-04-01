@@ -37,22 +37,22 @@ TEST_CONFIG_DIR = pathlib.Path(__file__).parents[1].joinpath("tests", "data", "c
 class CscTestCase(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase):
     def basic_make_csc(
         self,
-        initial_state,
-        config_dir,
-        simulation_mode,
-        index=SalIndex.LATISS,
-        settings_to_apply="",
-        **kwargs,
-    ):
+        initial_state: salobj.State,
+        config_dir: str,
+        simulation_mode: int,
+        index: SalIndex = SalIndex.LATISS,
+        override: str = "",
+        **kwargs: dict,
+    ) -> OCPS.OcpsCsc:
         return OCPS.OcpsCsc(
             initial_state=initial_state,
             config_dir=config_dir,
-            settings_to_apply=settings_to_apply,
+            override=override,
             simulation_mode=simulation_mode,
             index=index,
         )
 
-    async def test_default_config_dir(self):
+    async def test_default_config_dir(self) -> None:
         async with self.make_csc(
             initial_state=salobj.State.STANDBY,
             config_dir=None,
@@ -65,11 +65,11 @@ class CscTestCase(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase):
             desired_config_pkg_name = "dm_config_ocps"
             desired_config_env_name = desired_config_pkg_name.upper() + "_DIR"
             desired_config_pkg_dir = os.environ[desired_config_env_name]
-            desired_config_dir = pathlib.Path(desired_config_pkg_dir) / "OCPS/v3"
+            desired_config_dir = pathlib.Path(desired_config_pkg_dir) / "OCPS/v4"
             self.assertEqual(self.csc.get_config_pkg(), desired_config_pkg_name)
             self.assertEqual(self.csc.config_dir, desired_config_dir)
 
-    async def test_configuration(self):
+    async def test_configuration(self) -> None:
         async with self.make_csc(
             initial_state=salobj.State.STANDBY,
             config_dir=TEST_CONFIG_DIR,
@@ -86,11 +86,12 @@ class CscTestCase(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase):
                 with self.subTest(bad_config_name=bad_config_name):
                     with salobj.assertRaisesAckError():
                         await self.remote.cmd_start.set_start(
-                            settingsToApply=bad_config_name, timeout=STD_TIMEOUT
+                            configurationOverride=bad_config_name,
+                            timeout=STD_TIMEOUT,
                         )
 
             await self.remote.cmd_start.set_start(
-                settingsToApply="all_fields", timeout=STD_TIMEOUT
+                configurationOverride="all_fields.yaml", timeout=STD_TIMEOUT
             )
             await self.assert_next_sample(
                 self.remote.evt_softwareVersions,
@@ -103,10 +104,10 @@ class CscTestCase(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase):
             with open(all_fields_path, "r") as f:
                 all_fields_raw = f.read()
             all_fields_data = yaml.safe_load(all_fields_raw)
-            for field, value in all_fields_data.items():
+            for field, value in all_fields_data["instances"][0].items():
                 self.assertEqual(getattr(self.csc.config, field), value)
 
-    async def test_bin_script(self):
+    async def test_bin_script(self) -> None:
         await self.check_bin_script(
             name="OCPS", index=int(SalIndex.LATISS), exe_name="run_ocps.py"
         )
@@ -118,7 +119,7 @@ class CscTestCase(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase):
                 name="OCPS", index=4, exe_name="run_ocps.py", timeout=5
             )
 
-    async def test_standard_state_transitions(self):
+    async def test_standard_state_transitions(self) -> None:
         async with self.make_csc(
             initial_state=salobj.State.STANDBY,
             config_dir=None,
@@ -126,18 +127,16 @@ class CscTestCase(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase):
             index=SalIndex.LSSTComCam,
         ):
             await self.check_standard_state_transitions(
-                settingsToApply="LSSTComCam",
                 enabled_commands=(
                     "execute",
                     "abort_job",
                 ),
             )
 
-    async def test_simulation(self):
+    async def test_simulation(self) -> None:
         async with self.make_csc(
             initial_state=salobj.State.ENABLED,
             config_dir=None,
-            settings_to_apply="LATISS",
             simulation_mode=1,
             index=SalIndex.LATISS,
         ):
@@ -148,8 +147,6 @@ class CscTestCase(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase):
                     config="ignored",
                     wait_done=False,
                 )
-                self.assertEqual(ack.ack, salobj.SalRetCode.CMD_ACK)
-                ack = await self.remote.cmd_execute.next_ackcmd(ack, wait_done=False)
                 self.assertEqual(ack.ack, salobj.SalRetCode.CMD_INPROGRESS)
                 job_id = json.loads(ack.result)["job_id"]
                 self.assertTrue(

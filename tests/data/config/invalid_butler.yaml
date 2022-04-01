@@ -1,5 +1,7 @@
-instance: LATISS
-url: http://uws-api-server.nts.svc.cluster.local/job
-poll_interval: 0.8
-input_collection: LATISS/defaults,LATISS/raw/all
-output_glob: "*_metricvalue"
+instances:
+  - sal_index: 1
+    instance: LATISS
+    url: http://uws-api-server.nts.svc.cluster.local/job
+    poll_interval: 0.8
+    input_collection: LATISS/defaults,LATISS/raw/all
+    output_glob: "*_metricvalue"

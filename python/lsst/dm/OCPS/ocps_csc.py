@@ -24,12 +24,14 @@ import asyncio
 import json
 import logging
 import random
-import requests
+import requests  # type: ignore
 import types
+from typing import Optional, Set
 import yaml
 
 from lsst.ts import salobj
 from lsst.ts.idl.enums.OCPS import SalIndex
+from lsst.ts.utils import current_tai
 from . import __version__
 
 CONFIG_SCHEMA = yaml.safe_load(
@@ -37,41 +39,53 @@ CONFIG_SCHEMA = yaml.safe_load(
 $schema: http://json-schema.org/draft-07/schema#
 $id: https://github.com/lsst/dm_OCPS/blob/main/schema/OCPS.yaml
 # title must end with one or more spaces followed by the schema version, which must begin with "v"
-title: OCPS v3
+title: OCPS v4
 description: Schema for OCPS configuration files
 type: object
 properties:
-  instance:
-    description: >
-      Name of the OCPS instance this configuration is for.  Since
-      configurations for all indexed instances come from the same
-      dm_config_ocps repo, this name is checked at start command time against
-      the index (SalIndex enum) of the CSC.  This ensures that only appropriate
-      configurations can be used.
-    type: string
-  url:
-    description: URL of the REST API endpoint of the execution service
-    type: string
-    format: url
-  poll_interval:
-    description: Time between polls for status of executing pipelines (sec)
-    type: number
-    exclusiveMinimum: 0
-  butler:
-    description: Path/URI of Butler repo
-    type: string
-  input_collection:
-    description: Name of default input collection (optional)
-    type: string
-  output_glob:
-    description: Glob pattern for output dataset types
-    type: string
+  instances:
+    type: array
+    description: Configuration for each OCPS instance
+    minItem: 1
+    items:
+      type: object
+      properties:
+        sal_index:
+          type: integer
+          description: SAL index of OCPS instance
+        instance:
+          description: >
+            Name of the OCPS instance this configuration is for.
+            Primarily for documentation purposes, as the sal_index determines
+            which configuration is loaded.
+          type: string
+        url:
+          description: URL of the REST API endpoint of the execution service
+          type: string
+          format: url
+        poll_interval:
+          description: Time between polls for status of executing pipelines (sec)
+          type: number
+          exclusiveMinimum: 0
+        butler:
+          description: Path/URI of Butler repo
+          type: string
+        input_collection:
+          description: Name of default input collection (optional)
+          type: string
+        output_glob:
+          description: Glob pattern for output dataset types
+          type: string
+      required:
+        - sal_index
+        - instance
+        - url
+        - poll_interval
+        - butler
+        - output_glob
+      additionalProperties: false
 required:
-  - instance
-  - url
-  - poll_interval
-  - butler
-  - output_glob
+  - instances
 additionalProperties: false
 """
 )
@@ -119,27 +133,27 @@ class OcpsCsc(salobj.ConfigurableCsc):
 
     def __init__(
         self,
-        index,
-        config_dir=None,
-        initial_state=salobj.State.STANDBY,
-        settings_to_apply="",
-        simulation_mode=0,
+        index: int,
+        config_dir: Optional[str] = None,
+        initial_state: salobj.State = salobj.State.STANDBY,
+        override: str = "",
+        simulation_mode: int = 0,
     ):
-        self.config = None
-        self.simulated_jobs = set()
+        self.config: Optional[types.SimpleNamespace] = None
+        self.simulated_jobs: Set[str] = set()
         super().__init__(
             "OCPS",
             index=index,
             config_schema=CONFIG_SCHEMA,
             config_dir=config_dir,
             initial_state=initial_state,
-            settings_to_apply=settings_to_apply,
+            override=override,
             simulation_mode=simulation_mode,
         )
         self.cmd_execute.allow_multiple_callbacks = True
         self.log.addHandler(logging.StreamHandler())
 
-    async def do_execute(self, data):
+    async def do_execute(self, data: types.SimpleNamespace) -> None:
         """Implement the ``execute`` command.
 
         Parameters
@@ -151,7 +165,7 @@ class OcpsCsc(salobj.ConfigurableCsc):
         self.log.info(f"execute command with {data}")
         await self._execute(data)
 
-    async def _execute(self, data):
+    async def _execute(self, data: types.SimpleNamespace) -> None:
         """Submit a request for execution to the back-end REST API.
 
         Parameters
@@ -174,6 +188,8 @@ class OcpsCsc(salobj.ConfigurableCsc):
         beyond the default OODS input collection and ``-c`` options to
         override configuration values.
         """
+        if self.config is None:
+            raise salobj.ExpectedError("Configuration not set")
         if self.simulation_mode == 0:
             # Real command.
             run_options = ""
@@ -188,15 +204,15 @@ class OcpsCsc(salobj.ConfigurableCsc):
                 DATA_QUERY=data.data_query,
             )
             run_id = str(data.private_seqNum)
-            payload = dict(
+            json_payload = dict(
                 run_id=run_id,
                 command="cd $JOB_SOURCE_DIR && bash bin/pipetask.sh",
                 url="https://github.com/lsst-dm/uws_scripts",
                 commit_ref="main",
                 environment=[dict(name=k, value=v) for k, v in payload_env.items()],
             )
-            self.log.info(f"PUT {self.config.url}/job: {payload}")
-            result = self.connection.put(f"{self.config.url}/job", json=payload)
+            self.log.info(f"PUT {self.config.url}/job: {json_payload}")
+            result = self.connection.put(f"{self.config.url}/job", json=json_payload)
             result.raise_for_status()
             self.log.info(f"PUT {result.status_code} result: {result.text}")
             response = result.json()
@@ -210,14 +226,14 @@ class OcpsCsc(salobj.ConfigurableCsc):
                 raise salobj.ExpectedError(
                     f"Unknown (simulated) pipeline: {data.pipeline}"
                 )
-            job_id = f"{data.pipeline}-{salobj.current_tai()}"
+            job_id = f"{data.pipeline}-{current_tai()}"
             status_url = f"ocps://{job_id}"
             self.log.info(f"Simulated PUT result: {status_url}")
             self.simulated_jobs.add(job_id)
 
         payload = json.dumps(dict(job_id=job_id))
         # TODO DM-30032: change to a custom event
-        self.cmd_execute.ack_in_progress(data, timeout=600.0, result=payload)
+        await self.cmd_execute.ack_in_progress(data, timeout=600.0, result=payload)
         self.log.info(f"Ack in progress: {payload}")
         self.log.info(f"Starting async wait: {status_url}")
 
@@ -235,16 +251,16 @@ class OcpsCsc(salobj.ConfigurableCsc):
                 self.simulated_jobs.remove(job_id)
                 if job_id.startswith("true.yaml-"):
                     payload = json.dumps(dict(result=True))
-                    self.evt_job_result.set_put(
+                    await self.evt_job_result.set_write(
                         job_id=job_id, exit_code=0, result=payload
                     )
                 elif job_id.startswith("false.yaml-"):
                     payload = json.dumps(dict(result=False))
-                    self.evt_job_result.set_put(
+                    await self.evt_job_result.set_write(
                         job_id=job_id, exit_code=0, result=payload
                     )
                 elif job_id.startswith("fault.yaml-"):
-                    self.fault(
+                    await self.fault(
                         code=2, report="404 Simulation cannot contact execution service"
                     )
                     raise salobj.ExpectedError("Failed to connect (simulated)")
@@ -269,7 +285,7 @@ class OcpsCsc(salobj.ConfigurableCsc):
                 )
             if response["phase"] in DONE_PHASES:
                 exit_code = 1 if response["phase"] != "completed" else 0
-                self.evt_job_result.set_put(
+                await self.evt_job_result.set_write(
                     job_id=job_id, exit_code=exit_code, result=result.text
                 )
                 return
@@ -280,7 +296,7 @@ class OcpsCsc(salobj.ConfigurableCsc):
                 )
                 await asyncio.sleep(self.config.poll_interval)
 
-    async def do_abort_job(self, data):
+    async def do_abort_job(self, data: types.SimpleNamespace) -> None:
         """Implement the ``abort_job`` command.
 
         Parameters
@@ -288,6 +304,8 @@ class OcpsCsc(salobj.ConfigurableCsc):
         data: types.SimpleNamespace
             Must contain job_id attribute.
         """
+        if self.config is None:
+            raise salobj.ExpectedError("Configuration not set")
         self.assert_enabled("abort_job")
         self.log.info(f"abort_job command with {data}")
         if self.simulation_mode == 0:
@@ -295,14 +313,14 @@ class OcpsCsc(salobj.ConfigurableCsc):
             result = self.connection.delete(f"{self.config.url}/job/{data.job_id}")
             result.raise_for_status()
             self.log.info(f"Abort result: {result.text}")
-            self.evt_job_result.set_put(
+            await self.evt_job_result.set_write(
                 job_id=data.job_id, exit_code=255, result=result.text
             )
         else:
             if data.job_id in self.simulated_jobs:
                 self.simulated_jobs.remove(data.job_id)
-                payload = json.dumps(dict(abort_time=salobj.current_tai()))
-                self.evt_job_result.set_put(
+                payload = json.dumps(dict(abort_time=current_tai()))
+                await self.evt_job_result.set_write(
                     job_id=data.job_id, exit_code=255, result=payload
                 )
                 self.log.info(f"Abort result: {payload}")
@@ -310,17 +328,30 @@ class OcpsCsc(salobj.ConfigurableCsc):
                 raise salobj.ExpectedError("No such job id: {data.job_id}")
 
     @staticmethod
-    def get_config_pkg():
+    def get_config_pkg() -> str:
         return "dm_config_ocps"
 
-    async def configure(self, config: types.SimpleNamespace):
-        self.log.info(f"Configuring with {config}")
-        self.config = config
+    async def configure(self, config: types.SimpleNamespace) -> None:
+        self.config = None
+        for c in config.instances:
+            if SalIndex(c["sal_index"]) == self.salinfo.index:
+                if self.config is not None:
+                    raise salobj.ExpectedError(
+                        f"Configuration instance {self.config} already"
+                        f" exists when {c} is seen"
+                    )
+                else:
+                    self.config = types.SimpleNamespace(**c)
+        if self.config is None:
+            raise salobj.ExpectedError(
+                f"No configuration found for {self.salinfo.index}"
+            )
         index = SalIndex(self.salinfo.index)
         if index != SalIndex[self.config.instance]:
             raise salobj.ExpectedError(
                 f"Configuration instance '{self.config.instance}'"
                 f" does not match CSC index '{index!r}'"
             )
+        self.log.info(f"Configuring with {self.config}")
         if self.simulation_mode == 0:
             self.connection = requests.Session()
