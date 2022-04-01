@@ -65,7 +65,7 @@ class CscTestCase(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase):
             desired_config_pkg_name = "dm_config_ocps"
             desired_config_env_name = desired_config_pkg_name.upper() + "_DIR"
             desired_config_pkg_dir = os.environ[desired_config_env_name]
-            desired_config_dir = pathlib.Path(desired_config_pkg_dir) / "OCPS/v3"
+            desired_config_dir = pathlib.Path(desired_config_pkg_dir) / "OCPS/v4"
             self.assertEqual(self.csc.get_config_pkg(), desired_config_pkg_name)
             self.assertEqual(self.csc.config_dir, desired_config_dir)
 
@@ -86,11 +86,12 @@ class CscTestCase(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase):
                 with self.subTest(bad_config_name=bad_config_name):
                     with salobj.assertRaisesAckError():
                         await self.remote.cmd_start.set_start(
-                            override=bad_config_name, timeout=STD_TIMEOUT
+                            configurationOverride=bad_config_name,
+                            timeout=STD_TIMEOUT,
                         )
 
             await self.remote.cmd_start.set_start(
-                override="all_fields.yaml", timeout=STD_TIMEOUT
+                configurationOverride="all_fields.yaml", timeout=STD_TIMEOUT
             )
             await self.assert_next_sample(
                 self.remote.evt_softwareVersions,
@@ -126,7 +127,6 @@ class CscTestCase(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase):
             index=SalIndex.LSSTComCam,
         ):
             await self.check_standard_state_transitions(
-                override="LSSTComCam.yaml",
                 enabled_commands=(
                     "execute",
                     "abort_job",
@@ -137,7 +137,6 @@ class CscTestCase(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase):
         async with self.make_csc(
             initial_state=salobj.State.ENABLED,
             config_dir=None,
-            override="LATISS.yaml",
             simulation_mode=1,
             index=SalIndex.LATISS,
         ):

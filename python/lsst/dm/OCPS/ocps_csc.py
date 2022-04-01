@@ -329,14 +329,14 @@ class OcpsCsc(salobj.ConfigurableCsc):
     async def configure(self, config: types.SimpleNamespace):
         self.config = None
         for c in config.instances:
-            if c["sal_index"] == self.salinfo.index:
+            if SalIndex(c["sal_index"]) == self.salinfo.index:
                 if self.config is not None:
                     raise salobj.ExpectedError(
                         f"Configuration instance {self.config} already"
                         f" exists when {c} is seen"
                     )
                 else:
-                    self.config = c
+                    self.config = types.SimpleNamespace(**c)
         index = SalIndex(self.salinfo.index)
         if index != SalIndex[self.config.instance]:
             raise salobj.ExpectedError(
