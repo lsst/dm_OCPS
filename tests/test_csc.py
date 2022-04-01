@@ -37,13 +37,13 @@ TEST_CONFIG_DIR = pathlib.Path(__file__).parents[1].joinpath("tests", "data", "c
 class CscTestCase(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase):
     def basic_make_csc(
         self,
-        initial_state,
-        config_dir,
-        simulation_mode,
-        index=SalIndex.LATISS,
-        override="",
-        **kwargs,
-    ):
+        initial_state: salobj.State,
+        config_dir: str,
+        simulation_mode: int,
+        index: SalIndex = SalIndex.LATISS,
+        override: str = "",
+        **kwargs: dict,
+    ) -> OCPS.OcpsCsc:
         return OCPS.OcpsCsc(
             initial_state=initial_state,
             config_dir=config_dir,
@@ -52,7 +52,7 @@ class CscTestCase(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase):
             index=index,
         )
 
-    async def test_default_config_dir(self):
+    async def test_default_config_dir(self) -> None:
         async with self.make_csc(
             initial_state=salobj.State.STANDBY,
             config_dir=None,
@@ -69,7 +69,7 @@ class CscTestCase(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase):
             self.assertEqual(self.csc.get_config_pkg(), desired_config_pkg_name)
             self.assertEqual(self.csc.config_dir, desired_config_dir)
 
-    async def test_configuration(self):
+    async def test_configuration(self) -> None:
         async with self.make_csc(
             initial_state=salobj.State.STANDBY,
             config_dir=TEST_CONFIG_DIR,
@@ -107,7 +107,7 @@ class CscTestCase(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase):
             for field, value in all_fields_data["instances"][0].items():
                 self.assertEqual(getattr(self.csc.config, field), value)
 
-    async def test_bin_script(self):
+    async def test_bin_script(self) -> None:
         await self.check_bin_script(
             name="OCPS", index=int(SalIndex.LATISS), exe_name="run_ocps.py"
         )
@@ -119,7 +119,7 @@ class CscTestCase(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase):
                 name="OCPS", index=4, exe_name="run_ocps.py", timeout=5
             )
 
-    async def test_standard_state_transitions(self):
+    async def test_standard_state_transitions(self) -> None:
         async with self.make_csc(
             initial_state=salobj.State.STANDBY,
             config_dir=None,
@@ -133,7 +133,7 @@ class CscTestCase(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase):
                 ),
             )
 
-    async def test_simulation(self):
+    async def test_simulation(self) -> None:
         async with self.make_csc(
             initial_state=salobj.State.ENABLED,
             config_dir=None,

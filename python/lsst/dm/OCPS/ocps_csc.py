@@ -24,8 +24,9 @@ import asyncio
 import json
 import logging
 import random
-import requests
+import requests  # type: ignore
 import types
+from typing import Optional, Set
 import yaml
 
 from lsst.ts import salobj
@@ -132,14 +133,14 @@ class OcpsCsc(salobj.ConfigurableCsc):
 
     def __init__(
         self,
-        index,
-        config_dir=None,
-        initial_state=salobj.State.STANDBY,
-        override="",
-        simulation_mode=0,
+        index: int,
+        config_dir: Optional[str] = None,
+        initial_state: salobj.State = salobj.State.STANDBY,
+        override: str = "",
+        simulation_mode: int = 0,
     ):
-        self.config = None
-        self.simulated_jobs = set()
+        self.config: Optional[types.SimpleNamespace] = None
+        self.simulated_jobs: Set[str] = set()
         super().__init__(
             "OCPS",
             index=index,
@@ -152,7 +153,7 @@ class OcpsCsc(salobj.ConfigurableCsc):
         self.cmd_execute.allow_multiple_callbacks = True
         self.log.addHandler(logging.StreamHandler())
 
-    async def do_execute(self, data):
+    async def do_execute(self, data: types.SimpleNamespace) -> None:
         """Implement the ``execute`` command.
 
         Parameters
@@ -164,7 +165,7 @@ class OcpsCsc(salobj.ConfigurableCsc):
         self.log.info(f"execute command with {data}")
         await self._execute(data)
 
-    async def _execute(self, data):
+    async def _execute(self, data: types.SimpleNamespace) -> None:
         """Submit a request for execution to the back-end REST API.
 
         Parameters
@@ -187,6 +188,8 @@ class OcpsCsc(salobj.ConfigurableCsc):
         beyond the default OODS input collection and ``-c`` options to
         override configuration values.
         """
+        if self.config is None:
+            raise salobj.ExpectedError("Configuration not set")
         if self.simulation_mode == 0:
             # Real command.
             run_options = ""
@@ -201,15 +204,15 @@ class OcpsCsc(salobj.ConfigurableCsc):
                 DATA_QUERY=data.data_query,
             )
             run_id = str(data.private_seqNum)
-            payload = dict(
+            json_payload = dict(
                 run_id=run_id,
                 command="cd $JOB_SOURCE_DIR && bash bin/pipetask.sh",
                 url="https://github.com/lsst-dm/uws_scripts",
                 commit_ref="main",
                 environment=[dict(name=k, value=v) for k, v in payload_env.items()],
             )
-            self.log.info(f"PUT {self.config.url}/job: {payload}")
-            result = self.connection.put(f"{self.config.url}/job", json=payload)
+            self.log.info(f"PUT {self.config.url}/job: {json_payload}")
+            result = self.connection.put(f"{self.config.url}/job", json=json_payload)
             result.raise_for_status()
             self.log.info(f"PUT {result.status_code} result: {result.text}")
             response = result.json()
@@ -293,7 +296,7 @@ class OcpsCsc(salobj.ConfigurableCsc):
                 )
                 await asyncio.sleep(self.config.poll_interval)
 
-    async def do_abort_job(self, data):
+    async def do_abort_job(self, data: types.SimpleNamespace) -> None:
         """Implement the ``abort_job`` command.
 
         Parameters
@@ -301,6 +304,8 @@ class OcpsCsc(salobj.ConfigurableCsc):
         data: types.SimpleNamespace
             Must contain job_id attribute.
         """
+        if self.config is None:
+            raise salobj.ExpectedError("Configuration not set")
         self.assert_enabled("abort_job")
         self.log.info(f"abort_job command with {data}")
         if self.simulation_mode == 0:
@@ -323,10 +328,10 @@ class OcpsCsc(salobj.ConfigurableCsc):
                 raise salobj.ExpectedError("No such job id: {data.job_id}")
 
     @staticmethod
-    def get_config_pkg():
+    def get_config_pkg() -> str:
         return "dm_config_ocps"
 
-    async def configure(self, config: types.SimpleNamespace):
+    async def configure(self, config: types.SimpleNamespace) -> None:
         self.config = None
         for c in config.instances:
             if SalIndex(c["sal_index"]) == self.salinfo.index:
@@ -337,6 +342,10 @@ class OcpsCsc(salobj.ConfigurableCsc):
                     )
                 else:
                     self.config = types.SimpleNamespace(**c)
+        if self.config is None:
+            raise salobj.ExpectedError(
+                f"No configuration found for {self.salinfo.index}"
+            )
         index = SalIndex(self.salinfo.index)
         if index != SalIndex[self.config.instance]:
             raise salobj.ExpectedError(
