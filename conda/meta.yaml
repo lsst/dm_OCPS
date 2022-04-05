@@ -22,8 +22,8 @@ test:
   requires:
     - ts-conda-build
     - ts-dds
-    - ts-idl
-    - ts-salobj
+    - ts-idl {{ idl_version }}
+    - ts-salobj {{ salobj_version }}
   source_files:
     - python
     - bin
@@ -43,4 +43,5 @@ requirements:
     - requests
     - setuptools
     - setuptools_scm
+    - ts-idl
     - ts-salobj
