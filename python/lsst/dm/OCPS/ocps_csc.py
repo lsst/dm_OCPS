@@ -18,20 +18,21 @@
 #
 # You should have received a copy of the GNU General Public License
 
-__all__ = ["OcpsCsc", "CONFIG_SCHEMA"]
+__all__ = ["OcpsCsc", "run_ocps", "CONFIG_SCHEMA"]
 
 import asyncio
 import json
 import logging
 import random
-import requests  # type: ignore
 import types
 from typing import Optional, Set
-import yaml
 
+import requests  # type: ignore
+import yaml
 from lsst.ts import salobj
 from lsst.ts.idl.enums.OCPS import SalIndex
 from lsst.ts.utils import current_tai
+
 from . import __version__
 
 CONFIG_SCHEMA = yaml.safe_load(
@@ -355,3 +356,8 @@ class OcpsCsc(salobj.ConfigurableCsc):
         self.log.info(f"Configuring with {self.config}")
         if self.simulation_mode == 0:
             self.connection = requests.Session()
+
+
+def run_ocps() -> None:
+    """Run the OCPS CSC."""
+    asyncio.run(OcpsCsc.amain(index=SalIndex))

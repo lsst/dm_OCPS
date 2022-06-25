@@ -16,3 +16,12 @@ This code uses ``pre-commit`` to maintain ``black`` formatting and ``flake8`` co
 To enable this, run the following command once::
 
     pre-commit install
+
+Build process sketch
+====================
+
+1. Build and test in the TSSW devel container (lsstts/develop-env) (https://tssw-developer.lsst.io/docker/docker.html#csc-development).
+2. Use the TSSW conda-build container (lsstts/conda_package_builder) to build using the conda recipe (https://tssw-developer.lsst.io/conda/conda.html).
+3. Publish to the ``lsst-dm`` conda channel on Anaconda using the ``anaconda login`` command with the ``dm-admin`` user (credentials in the Architecture vault in 1Password) and the ``anaconda upload`` command.
+4. Update the version in lsst-ts/ts_cycle_build cycle/cycle.env.
+5. Use the TSSW Jenkins (https://tssw-ci.lsst.org/view/CycleBuild/job/cycleBuild/) to build and publish the container.

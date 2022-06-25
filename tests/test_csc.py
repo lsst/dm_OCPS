@@ -24,11 +24,11 @@ import json
 import os
 import pathlib
 import unittest
-import yaml
 
+import yaml
+from lsst.dm import OCPS
 from lsst.ts import salobj
 from lsst.ts.idl.enums.OCPS import SalIndex
-from lsst.dm import OCPS
 
 STD_TIMEOUT = 2  # standard command timeout (sec)
 TEST_CONFIG_DIR = pathlib.Path(__file__).parents[1].joinpath("tests", "data", "config")
@@ -109,14 +109,14 @@ class CscTestCase(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase):
 
     async def test_bin_script(self) -> None:
         await self.check_bin_script(
-            name="OCPS", index=int(SalIndex.LATISS), exe_name="run_ocps.py"
+            name="OCPS", index=int(SalIndex.LATISS), exe_name="run_ocps"
         )
         await self.check_bin_script(
-            name="OCPS", index=int(SalIndex.LSSTComCam), exe_name="run_ocps.py"
+            name="OCPS", index=int(SalIndex.LSSTComCam), exe_name="run_ocps"
         )
         with self.assertRaises(asyncio.exceptions.TimeoutError):
             await self.check_bin_script(
-                name="OCPS", index=4, exe_name="run_ocps.py", timeout=5
+                name="OCPS", index=4, exe_name="run_ocps", timeout=5
             )
 
     async def test_standard_state_transitions(self) -> None:

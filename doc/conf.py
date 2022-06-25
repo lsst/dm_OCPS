@@ -3,9 +3,8 @@
 This configuration only affects single-package Sphinx documentation builds.
 """
 
-from documenteer.sphinxconfig.stackconf import build_package_configs
 import lsst.dm.OCPS
-
+from documenteer.sphinxconfig.stackconf import build_package_configs
 
 _g = globals()
 _g.update(

@@ -7,7 +7,10 @@ source:
   path: ../
 
 build:
+  noarch: generic
   script: python -m pip install --no-deps --ignore-installed .
+  entry_points:
+    - run_ocps = lsst.dm.OCPS.ocps_csc:run_ocps
   script_env:
     - PATH
     - PYTHONPATH
@@ -16,11 +19,11 @@ build:
     - PYTHON_BUILD_VERSION
     - PYTHON_BUILD_LOCATION
     - DM_CONFIG_OCPS_DIR
-    - LSST_DDS_DOMAIN
+    - LSST_DDS_PARTITION_PREFIX
 
 test:
   requires:
-    - ts-conda-build
+    - ts-conda-build =0.3
     - ts-dds
     - ts-idl {{ idl_version }}
     - ts-salobj {{ salobj_version }}
@@ -29,6 +32,7 @@ test:
     - bin
     - tests
     - setup.cfg
+    - pyproject.toml
   commands:
     - py.test
 
