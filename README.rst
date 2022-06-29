@@ -39,7 +39,7 @@ Build process sketch
       docker run -it -e DM_CONFIG_OCPS_DIR=/home/saluser/develop/dm_config_ocps -v `pwd`/develop:/home/saluser/develop --rm ts-dockerhub.lsst.org/conda_package_builder:latest
       conda build --variants "{salobj_version: '', idl_version: ''}" --prefix-length=100 .
 
-5. Publish to the ``lsst-dm`` conda channel on Anaconda using the ``anaconda login`` command with the ``dm-admin`` user (credentials in the Architecture vault in 1Password) and the ``anaconda upload`` command printed by ``conda build`` with the ``--channel lsst-dm`` option.
+5. Publish to the ``lsst-dm`` conda channel on Anaconda using the ``anaconda login`` command with the ``dm-admin`` user (credentials in the Architecture vault in 1Password) and the ``anaconda upload`` command printed by ``conda build`` with the ``--user lsst-dm`` option.
 6. Update the version in ``lsst-ts/ts_cycle_build`` ``cycle/cycle.env`` on a ticket branch.
 7. Use the `TSSW Jenkins <https://tssw-ci.lsst.org/view/CycleBuild/job/cycleBuild/>`__ to build and publish the container using that ticket branch.
 8. Request merge of the ticket branch and deployment of the container from the TTS manager.
