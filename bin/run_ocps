@@ -17,9 +17,6 @@
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
 #
-import asyncio
+from lsst.dm.OCPS import run_ocps
 
-from lsst.dm import OCPS
-from lsst.ts.idl.enums.OCPS import SalIndex
-
-asyncio.run(OCPS.OcpsCsc.amain(index=SalIndex))
+run_ocps()
