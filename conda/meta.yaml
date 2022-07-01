@@ -8,7 +8,7 @@ source:
 
 build:
   noarch: generic
-  script: python -m pip install --no-deps --ignore-installed .
+  script: {{ PYTHON }} -m pip install --no-deps --ignore-installed .
   entry_points:
     - run_ocps = lsst.dm.OCPS.ocps_csc:run_ocps
   script_env:
@@ -38,12 +38,12 @@ test:
 
 requirements:
   host:
-    - python
+    - python {{ python }}
     - pip
     - setuptools_scm
     - setuptools
   run:
-    - python
+    - python {{ python }}
     - requests
     - setuptools
     - setuptools_scm
