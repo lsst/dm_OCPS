@@ -207,6 +207,9 @@ class OcpsCsc(salobj.ConfigurableCsc):
                 OUTPUT_GLOB=self.config.output_glob,
                 DATA_QUERY=data.data_query,
             )
+            if hasattr(data, "output_dataset_types") and data.output_dataset_types:
+                payload_env["OUTPUT_GLOB"] = data.output_dataset_types
+
             run_id = str(data.private_seqNum)
             json_payload = dict(
                 run_id=run_id,
