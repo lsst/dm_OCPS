@@ -32,8 +32,9 @@ Build process sketch
       setup -k -r .
       scons
 
-3. When ready, merge to main and tag with an appropriate semantic version.
-4. Use the TSSW conda-build container to build using the conda recipe (https://tssw-developer.lsst.io/conda/conda.html).
+3. Update the version history in ``doc/version_history.rst`` using an appropriate semantic version number.
+4. When ready, merge to main and tag with the version number.
+5. Use the TSSW conda-build container to build using the conda recipe (https://tssw-developer.lsst.io/conda/conda.html).
 
    .. code-block:: sh
 
@@ -42,7 +43,7 @@ Build process sketch
       cd develop/dm_OCPS
       conda build --variants "{salobj_version: '', idl_version: ''}" --prefix-length=100 .
 
-5. Publish to the ``lsst-dm`` conda channel on Anaconda using the ``anaconda login`` command with the ``dm-admin`` user (credentials in the Architecture vault in 1Password) and the ``anaconda upload`` command printed by ``conda build`` with the ``--user lsst-dm`` option.
-6. Update the version of ``dm_OCPS`` (and ``dm_config_ocps``, if necessary) in ``lsst-ts/ts_cycle_build`` ``cycle/cycle.env`` on a ticket branch.
-7. Use the `TSSW Jenkins <https://tssw-ci.lsst.org/view/CycleBuild/job/cycleBuild/>`__ to build and publish the container using that ticket branch.
-8. Request merge of the ticket branch and deployment of the container from the TTS manager.
+6. Publish to the ``lsst-dm`` conda channel on Anaconda using the ``anaconda login`` command with the ``dm-admin`` user (credentials in the Architecture vault in 1Password) and the ``anaconda upload`` command printed by ``conda build`` with the ``--user lsst-dm`` option.
+7. Update the version of ``dm_OCPS`` (and ``dm_config_ocps``, if necessary) in ``lsst-ts/ts_cycle_build`` ``cycle/cycle.env`` on a ticket branch.
+8. Use the `TSSW Jenkins <https://tssw-ci.lsst.org/view/CycleBuild/job/cycleBuild/>`__ to build and publish the container using that ticket branch.
+9. Request merge of the ticket branch and deployment of the container from the TTS manager.
