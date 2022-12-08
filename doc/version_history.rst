@@ -36,3 +36,9 @@ v4.1.0
 ======
 
 * Use pyproject.toml.
+
+
+v4.2.0
+======
+
+* Add features for prerequisite jobs and output dataset type override.
