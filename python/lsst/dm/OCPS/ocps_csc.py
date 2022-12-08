@@ -299,7 +299,7 @@ class OcpsCsc(salobj.ConfigurableCsc):
                 )
                 await asyncio.sleep(self.config.poll_interval)
 
-    async def get_job_status(self, job_id: str) -> Optional[dict]:
+    async def get_job_status(self, job_id: str) -> dict:
         """Retrieve the status of a job submitted to the UWS backend.
 
         Parameters
@@ -309,8 +309,8 @@ class OcpsCsc(salobj.ConfigurableCsc):
 
         Returns
         -------
-        response: `dict`-like, optional
-            The status response, decoded from JSON.  May be None.
+        response: `dict`-like
+            The status response, decoded from JSON.
 
         Raises
         ------
