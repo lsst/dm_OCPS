@@ -193,6 +193,9 @@ class OcpsCsc(salobj.ConfigurableCsc):
             raise salobj.ExpectedError("Configuration not set")
         if self.simulation_mode == 0:
             # Real command.
+            if hasattr(data, "prereq_jobs") and data.prereq_jobs:
+                await self._wait_for_prereqs(data.prereq_jobs.split(","))
+
             run_options = ""
             if hasattr(self.config, "input_collection"):
                 run_options = f"-i {self.config.input_collection}"
@@ -271,11 +274,7 @@ class OcpsCsc(salobj.ConfigurableCsc):
                     )
                 return
 
-            self.log.info(f"GET: {status_url}")
-            result = self.connection.get(status_url)
-            result.raise_for_status()
-            self.log.info(f"{status_url} result: {result.text}")
-            response = result.json()
+            response = self.get_job_status(status_url)
             if response["jobId"] != job_id:
                 raise salobj.ExpectedError(
                     f"Job ID mismatch: got {response['jobId']} instead of {job_id}"
@@ -296,6 +295,67 @@ class OcpsCsc(salobj.ConfigurableCsc):
                     f" sleeping for {self.config.poll_interval}"
                 )
                 await asyncio.sleep(self.config.poll_interval)
+
+    async def get_job_status(self, job_id: str):
+        """Retrieve the status of a job submitted to the UWS backend.
+
+        Parameters
+        ----------
+        job_id: str
+            The job id returned from a submission to the UWS.
+
+        Returns
+        -------
+        response: `dict`-like, optional
+            The status response, decoded from JSON.  May be None.
+
+        Raises
+        ------
+        requests.exceptions.HTTPError
+            On any failure.
+        """
+        status_url = f"{self.config.url}/job/{job_id}"
+        self.log.info(f"GET: {status_url}")
+        result = self.connection.get(status_url)
+        result.raise_for_status()
+        self.log.info(f"{status_url} result: {result.text}")
+        response = result.json()
+        return response
+
+    async def _wait_for_prereqs(self, jobs_list) -> None:
+        """Wait for completion of a given list of prerequisite jobs.
+
+        Note that completion does not require success.
+
+        Parameters
+        ----------
+        jobs_list: `list` [`str`]
+            A list of job ids to wait for.
+        """
+        for job_id in jobs_list:
+            while True:
+                try:
+                    response = await self.get_job_status(job_id)
+                except requests.exceptions.HTTPError as e:
+                    if e.response.status_code == 404:
+                        # This job doesn't exist, stop waiting for it
+                        self.log.warn(f"Prerequisite job {job_id} does not exist")
+                        break
+                    else:
+                        raise
+                if response["jobId"] != job_id:
+                    raise salobj.ExpectedError(
+                        f"Job ID mismatch: got {response['jobId']} instead of {job_id}"
+                    )
+                if response["phase"] in DONE_PHASES:
+                    # Job is done, stop waiting for it
+                    break
+                else:
+                    self.log.debug(
+                        f"Prereq job {job_id} phase {response['phase']}"
+                        f" sleeping for {self.config.poll_interval}"
+                    )
+                    await asyncio.sleep(self.config.poll_interval)
 
     async def do_abort_job(self, data: types.SimpleNamespace) -> None:
         """Implement the ``abort_job`` command.
