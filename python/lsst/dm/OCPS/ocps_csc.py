@@ -299,7 +299,7 @@ class OcpsCsc(salobj.ConfigurableCsc):
                 )
                 await asyncio.sleep(self.config.poll_interval)
 
-    async def get_job_status(self, job_id: str):
+    async def get_job_status(self, job_id: str) -> Optional[dict]:
         """Retrieve the status of a job submitted to the UWS backend.
 
         Parameters
@@ -317,6 +317,8 @@ class OcpsCsc(salobj.ConfigurableCsc):
         requests.exceptions.HTTPError
             On any failure.
         """
+        if self.config is None:
+            raise salobj.ExpectedError("Configuration not set")
         status_url = f"{self.config.url}/job/{job_id}"
         self.log.info(f"GET: {status_url}")
         result = self.connection.get(status_url)
@@ -325,7 +327,7 @@ class OcpsCsc(salobj.ConfigurableCsc):
         response = result.json()
         return response
 
-    async def _wait_for_prereqs(self, jobs_list) -> None:
+    async def _wait_for_prereqs(self, jobs_list: list[str]) -> None:
         """Wait for completion of a given list of prerequisite jobs.
 
         Note that completion does not require success.
@@ -335,6 +337,8 @@ class OcpsCsc(salobj.ConfigurableCsc):
         jobs_list: `list` [`str`]
             A list of job ids to wait for.
         """
+        if self.config is None:
+            raise salobj.ExpectedError("Configuration not set")
         for job_id in jobs_list:
             while True:
                 try:
