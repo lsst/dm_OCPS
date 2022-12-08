@@ -37,7 +37,7 @@ Build process sketch
 
    .. code-block:: sh
 
-      docker pull ts-dockerhub.lsst.org/conda_package_builder:latest
+      docker pull lsstts/conda_package_builder:latest
       docker run -it -e DM_CONFIG_OCPS_DIR=/home/saluser/develop/dm_config_ocps -v `pwd`/develop:/home/saluser/develop --rm ts-dockerhub.lsst.org/conda_package_builder:latest
       cd develop/dm_OCPS
       conda build --variants "{salobj_version: '', idl_version: ''}" --prefix-length=100 .
