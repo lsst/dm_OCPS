@@ -42,3 +42,8 @@ v4.2.0
 ======
 
 * Add features for prerequisite jobs and output dataset type override.
+
+v4.2.1
+======
+
+* Fix an asyncio usage bug.
