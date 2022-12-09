@@ -277,7 +277,7 @@ class OcpsCsc(salobj.ConfigurableCsc):
                     )
                 return
 
-            response = self.get_job_status(status_url)
+            response = await self.get_job_status(status_url)
             if response["jobId"] != job_id:
                 raise salobj.ExpectedError(
                     f"Job ID mismatch: got {response['jobId']} instead of {job_id}"
