@@ -47,3 +47,8 @@ v4.2.1
 ======
 
 * Fix an asyncio usage bug.
+
+v4.2.2
+======
+
+* Fix a status URL handling bug.

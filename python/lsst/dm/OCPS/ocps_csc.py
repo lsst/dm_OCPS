@@ -224,7 +224,6 @@ class OcpsCsc(salobj.ConfigurableCsc):
             self.log.info(f"PUT {result.status_code} result: {result.text}")
             response = result.json()
             job_id = response["jobId"]
-            status_url = f"{self.config.url}/job/{job_id}"
         else:
             # Simulation mode.
             # Rather than prepare a PUT request, simulate one with a special
@@ -234,23 +233,20 @@ class OcpsCsc(salobj.ConfigurableCsc):
                     f"Unknown (simulated) pipeline: {data.pipeline}"
                 )
             job_id = f"{data.pipeline}-{current_tai()}"
-            status_url = f"ocps://{job_id}"
-            self.log.info(f"Simulated PUT result: {status_url}")
+            self.log.info(f"Simulated PUT result: {job_id}")
             self.simulated_jobs.add(job_id)
 
         payload = json.dumps(dict(job_id=job_id))
         # TODO DM-30032: change to a custom event
         await self.cmd_execute.ack_in_progress(data, timeout=600.0, result=payload)
         self.log.info(f"Ack in progress: {payload}")
-        self.log.info(f"Starting async wait: {status_url}")
+        self.log.info(f"Starting async wait: {job_id}")
 
         while True:
             if self.simulation_mode != 0:
                 # Simulation mode.
                 # Rather than poll for pipeline status, simulate an appropriate
                 # response.
-                if not status_url.startswith("ocps://"):
-                    raise salobj.ExpectedError(f"Invalid simulation URL: {status_url}")
                 await asyncio.sleep(abs(random.normalvariate(10, 4)))
                 self.log.info(f"Simulating result for {job_id}")
                 if job_id not in self.simulated_jobs:
@@ -277,7 +273,7 @@ class OcpsCsc(salobj.ConfigurableCsc):
                     )
                 return
 
-            response = await self.get_job_status(status_url)
+            response = await self.get_job_status(job_id)
             if response["jobId"] != job_id:
                 raise salobj.ExpectedError(
                     f"Job ID mismatch: got {response['jobId']} instead of {job_id}"
@@ -294,7 +290,7 @@ class OcpsCsc(salobj.ConfigurableCsc):
                 return
             else:
                 self.log.debug(
-                    f"{status_url} phase {response['phase']}"
+                    f"{job_id} phase {response['phase']}"
                     f" sleeping for {self.config.poll_interval}"
                 )
                 await asyncio.sleep(self.config.poll_interval)
