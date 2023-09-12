@@ -24,24 +24,27 @@ build:
 test:
   requires:
     - ts-conda-build =0.3
-    - ts-dds
     - ts-idl {{ idl_version }}
     - ts-salobj {{ salobj_version }}
   source_files:
-    - python
     - bin
-    - tests
-    - setup.cfg
     - pyproject.toml
+    - python
+    - setup.cfg
+    - tests
   commands:
     - py.test
 
 requirements:
   host:
     - python {{ python }}
-    - pip
-    - setuptools_scm
     - setuptools
+    - setuptools_scm
+  build:
+    - python {{ python }}
+    - setuptools
+    - setuptools_scm
+    - ts-conda-build =0.3
   run:
     - python {{ python }}
     - requests
