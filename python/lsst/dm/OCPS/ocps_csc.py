@@ -215,7 +215,7 @@ class OcpsCsc(salobj.ConfigurableCsc):
                 run_id=run_id,
                 command="cd $JOB_SOURCE_DIR && bash bin/pipetask.sh",
                 url="https://github.com/lsst-dm/uws_scripts",
-                commit_ref="main",
+                commit_ref="tickets/DM-44197",
                 environment=[dict(name=k, value=v) for k, v in payload_env.items()],
             )
             self.log.info(f"PUT {self.config.url}/job: {json_payload}")
