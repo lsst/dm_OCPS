@@ -52,3 +52,12 @@ v4.2.2
 ======
 
 * Fix a status URL handling bug.
+
+v4.3.0
+======
+
+* Add support for an index based implementation that uses Rapid Analysis as the backend.
+  This is done via a Redis server, by setting specific key/values.
+  The index based implementation means that the CSC will run in Rapid Analysis mode only if it is running with a specific set of indices.
+  For now, this is only index=101.
+
