@@ -24,7 +24,9 @@ import json
 import os
 import pathlib
 import unittest
+from contextlib import contextmanager
 
+import redis
 import yaml
 from lsst.dm import OCPS
 from lsst.ts import salobj
@@ -68,6 +70,64 @@ class CscTestCase(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase):
             desired_config_dir = pathlib.Path(desired_config_pkg_dir) / "OCPS/v4"
             self.assertEqual(self.csc.get_config_pkg(), desired_config_pkg_name)
             self.assertEqual(self.csc.config_dir, desired_config_dir)
+
+    async def test_rapid_analysis_instance_env_vars_not_set(self) -> None:
+        async with self.make_csc(
+            initial_state=salobj.State.STANDBY,
+            config_dir=None,
+            simulation_mode=1,
+            index=101,
+        ):
+            with salobj.assertRaisesAckError(
+                ack=salobj.SalRetCode.CMD_FAILED,
+                result_contains="Redis hostname is not defined.",
+            ):
+                await self.check_standard_state_transitions(
+                    enabled_commands=(
+                        "execute",
+                        "abort_job",
+                    ),
+                )
+
+    @unittest.mock.patch("redis.Redis", unittest.mock.Mock(spec=redis.Redis))
+    async def test_rapid_analysis_instance_env_vars_set(self) -> None:
+        async with self.make_csc(
+            initial_state=salobj.State.STANDBY,
+            config_dir=None,
+            simulation_mode=1,
+            index=101,
+        ):
+            with self.redis_env_vars():
+                await self.check_standard_state_transitions(
+                    enabled_commands=(
+                        "execute",
+                        "abort_job",
+                    ),
+                )
+                self.csc.redis.ping.assert_called()
+
+    @unittest.mock.patch("redis.Redis", unittest.mock.Mock(spec=redis.Redis))
+    async def test_execute_rapid_analysis(self) -> None:
+        async with self.make_csc(
+            initial_state=salobj.State.STANDBY,
+            config_dir=None,
+            simulation_mode=1,
+            index=101,
+        ):
+            with self.redis_env_vars():
+                await salobj.set_summary_state(self.remote, salobj.State.ENABLED)
+
+                value = dict(test_int=1234, test_str="12345")
+                await self.remote.cmd_execute.set_start(
+                    config=json.dumps(value),
+                    timeout=STD_TIMEOUT,
+                )
+
+                expected_calls = (
+                    unittest.mock.call("test_int", 1234),
+                    unittest.mock.call("test_str", "12345"),
+                )
+                self.csc.redis.lpush.assert_has_calls(expected_calls)
 
     async def test_configuration(self) -> None:
         async with self.make_csc(
@@ -174,6 +234,16 @@ class CscTestCase(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase):
                     config="ignored",
                     wait_done=True,
                 )
+
+    @contextmanager
+    def redis_env_vars(self):
+        try:
+            os.environ["REDIS_HOST"] = "http://localhost"
+            os.environ["REDIS_PASSWORD"] = "12345"
+            yield
+        finally:
+            del os.environ["REDIS_HOST"]
+            del os.environ["REDIS_PASSWORD"]
 
 
 if __name__ == "__main__":
