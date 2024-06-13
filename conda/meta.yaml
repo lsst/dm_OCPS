@@ -11,19 +11,10 @@ build:
   script: {{ PYTHON }} -m pip install --no-deps --ignore-installed .
   entry_points:
     - run_ocps = lsst.dm.OCPS.ocps_csc:run_ocps
-  script_env:
-    - PATH
-    - PYTHONPATH
-    - LD_LIBRARY_PATH
-    - OSPL_HOME
-    - PYTHON_BUILD_VERSION
-    - PYTHON_BUILD_LOCATION
-    - DM_CONFIG_OCPS_DIR
-    - LSST_DDS_PARTITION_PREFIX
 
 test:
   requires:
-    - ts-conda-build =0.3
+    - ts-conda-build =0.4
     - redis
     - ts-idl {{ idl_version }}
     - ts-salobj {{ salobj_version }}
@@ -31,10 +22,9 @@ test:
     - python
     - bin
     - tests
-    - setup.cfg
     - pyproject.toml
   commands:
-    - py.test
+    - pytest
 
 requirements:
   host:
