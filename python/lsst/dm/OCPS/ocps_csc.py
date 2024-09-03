@@ -23,10 +23,12 @@ __all__ = ["OcpsCsc", "run_ocps", "CONFIG_SCHEMA"]
 import asyncio
 import json
 import logging
+import os
 import random
 import types
 from typing import Optional, Set
 
+import redis
 import requests  # type: ignore
 import yaml
 from lsst.ts import salobj
@@ -131,6 +133,9 @@ class OcpsCsc(salobj.ConfigurableCsc):
 
     valid_simulation_modes = (0, 1)
     version = __version__
+    # If the csc has one of the following indices it will use
+    # rapid analysis as the backend.
+    rapid_analysis_backend_indices = frozenset((101,))
 
     def __init__(
         self,
@@ -154,6 +159,8 @@ class OcpsCsc(salobj.ConfigurableCsc):
         self.cmd_execute.allow_multiple_callbacks = True
         self.log.addHandler(logging.StreamHandler())
 
+        self.redis = None
+
     async def do_execute(self, data: types.SimpleNamespace) -> None:
         """Implement the ``execute`` command.
 
@@ -163,8 +170,14 @@ class OcpsCsc(salobj.ConfigurableCsc):
             Must contain version, pipeline, config, and data_query attributes
         """
         self.assert_enabled("execute")
-        self.log.info(f"execute command with {data}")
-        await self._execute(data)
+        if self.salinfo.index not in self.rapid_analysis_backend_indices:
+            self.log.info(f"execute command with {data}")
+            await self._execute(data)
+        else:
+            self.log.info(
+                f"executing command with {data} using rapid analysis backend."
+            )
+            await self._execute_with_rapid_analysis_backend(data)
 
     async def _execute(self, data: types.SimpleNamespace) -> None:
         """Submit a request for execution to the back-end REST API.
@@ -295,6 +308,27 @@ class OcpsCsc(salobj.ConfigurableCsc):
                 )
                 await asyncio.sleep(self.config.poll_interval)
 
+    async def _execute_with_rapid_analysis_backend(
+        self, data: types.SimpleNamespace
+    ) -> None:
+        """Submit a request for execution to rapid analysis backend.
+
+        Parameters
+        ----------
+        data: types.SimpleNamespace
+            Must contain version, pipeline, config, data_query attributes
+
+        Notes
+        -----
+        config: str
+            Must be a json string with a key, value data to be sent to
+            the rapid analysis redis server.
+        """
+        self.log.debug(f"Parsing {data.config}.")
+        values = json.loads(data.config)
+        for key, value in values.items():
+            self.redis.lpush(key, value)
+
     async def get_job_status(self, job_id: str) -> dict:
         """Retrieve the status of a job submitted to the UWS backend.
 
@@ -397,6 +431,12 @@ class OcpsCsc(salobj.ConfigurableCsc):
 
     async def configure(self, config: types.SimpleNamespace) -> None:
         self.config = None
+
+        if self.salinfo.index in self.rapid_analysis_backend_indices:
+            self.log.info("Configuring CSC to use rapid analysis backend.")
+            self.configure_rapid_analysis_backend()
+            return
+
         for c in config.instances:
             if SalIndex(c["sal_index"]) == self.salinfo.index:
                 if self.config is not None:
@@ -419,6 +459,36 @@ class OcpsCsc(salobj.ConfigurableCsc):
         self.log.info(f"Configuring with {self.config}")
         if self.simulation_mode == 0:
             self.connection = requests.Session()
+
+    def configure_rapid_analysis_backend(self) -> None:
+        """Configure CSC to use rapid analysis backend."""
+
+        host = os.getenv("REDIS_HOST")
+        if host is None:
+            raise salobj.ExpectedError(
+                "Redis hostname is not defined. "
+                "Make sure environment variable REDIS_HOST is set "
+                "to the correct value."
+            )
+        password = os.getenv("REDIS_PASSWORD")
+        if password is None:
+            raise salobj.ExpectedError(
+                "Redis password is not defined. "
+                "Make sure the environment variable REDIS_PASSWORD is set."
+            )
+        port = os.getenv("REDIS_PORT", 6379)
+        self.log.debug(f"Configuring redis client to {host}:{port}.")
+        self.redis = redis.Redis(host=host, password=password, port=port)
+        try:
+            self.redis.ping()
+        except redis.exceptions.ConnectionError as e:
+            raise RuntimeError(
+                f"Could not connect to redis @ {host}:{port} - is it running?"
+            ) from e
+        except Exception as e:
+            raise RuntimeError(
+                f"Unexpected error connecting to redis @ {host}:{port} - {e}"
+            )
 
 
 def run_ocps() -> None:
