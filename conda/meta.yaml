@@ -11,11 +11,11 @@ build:
   script: {{ PYTHON }} -m pip install --no-deps --ignore-installed .
   entry_points:
     - run_ocps = lsst.dm.OCPS.ocps_csc:run_ocps
+  string: "py{{ PY_VER | replace('.', '') }}{{ PKG_HASH }}_{{ PKG_BUILDNUM }}"
 
 test:
   requires:
-    - ts-conda-build =0.4
-    - redis-py
+    - ts-conda-build =0.5
     - ts-xml {{ xml_version }}
     - ts-salobj {{ salobj_version }}
   source_files:
